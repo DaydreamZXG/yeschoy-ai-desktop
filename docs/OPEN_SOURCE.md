@@ -23,7 +23,7 @@
 
 - 任何 HTTPS 中转站都能接入。站点第一次出现时，桌面端会弹窗请用户确认，确认过的站点保存在应用数据目录的 `trusted-stations.json`。
 - 站点没有部署桌面接口时，用户可以粘贴 sk- 令牌：桌面端会验证令牌并列出可用模型。
-- 站点想做到一键登录，按 `docs/patch/new-api-desktop-connect/` 打补丁即可。
+- 站点想做到一键登录：new-api 按 `docs/patch/new-api-desktop-connect/` 打补丁，sub2api 按 `docs/patch/sub2api-desktop-connect/` 打补丁。
 
 ## 清理 git 历史（不在真实仓库上执行）
 

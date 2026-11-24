@@ -1,0 +1,1797 @@
+diff --git a/backend/cmd/server/wire_gen.go b/backend/cmd/server/wire_gen.go
+index 2835089f9..d7580380d 100644
+--- a/backend/cmd/server/wire_gen.go
++++ b/backend/cmd/server/wire_gen.go
+@@ -320,6 +320,9 @@ func initializeApplication(buildInfo handler.BuildInfo) (*Application, error) {
+ 	availableChannelHandler := handler.NewAvailableChannelHandler(channelService, apiKeyService, settingService)
+ 	modelPlazaService := service.NewModelPlazaService(channelRepository, groupRepository, pricingService, billingService, modelPricingResolver)
+ 	modelPlazaHandler := handler.NewModelPlazaHandler(modelPlazaService, apiKeyService, settingService)
++	desktopConnectCodeStore := repository.NewDesktopConnectCodeStore(redisClient)
++	desktopConnectService := service.NewDesktopConnectService(desktopConnectCodeStore, userRepository, authService)
++	desktopHandler := handler.NewDesktopHandler(desktopConnectService, authService, userService, apiKeyService, modelPlazaService, usageService, announcementService, settingService)
+ 	imageTaskStore := repository.NewImageTaskStore(redisClient)
+ 	imageTaskService := service.ProvideImageTaskService(imageTaskStore, imageStorageSettingService)
+ 	asyncImageHandler := handler.NewAsyncImageHandler(imageTaskService, openAIGatewayHandler)
+@@ -333,7 +336,7 @@ func initializeApplication(buildInfo handler.BuildInfo) (*Application, error) {
+ 	batchImageHandler := handler.ProvideBatchImageHandler(batchImagePublicService, batchImageDownloadService, batchImageCleanupService, openAIGatewayHandler)
+ 	idempotencyCleanupService := service.ProvideIdempotencyCleanupService(idempotencyRepository, configConfig)
+ 	openAIQuotaAutoResetService := service.ProvideOpenAIQuotaAutoResetService(accountRepository, openAIQuotaService, rateLimitService, idempotencyCoordinator, auditLogService, settingService, leaderLockCache)
+-	handlers := handler.ProvideHandlers(authHandler, userHandler, mcpoAuthHandler, apiKeyHandler, usageHandler, redeemHandler, subscriptionHandler, announcementHandler, channelMonitorUserHandler, channelMonitorV2Handler, adminHandlers, gatewayHandler, openAIGatewayHandler, handlerSettingHandler, totpHandler, passkeyHandler, handlerPaymentHandler, paymentWebhookHandler, availableChannelHandler, modelPlazaHandler, asyncImageHandler, batchImageHandler, idempotencyCoordinator, idempotencyCleanupService, openAIQuotaAutoResetService)
++	handlers := handler.ProvideHandlers(authHandler, userHandler, mcpoAuthHandler, apiKeyHandler, usageHandler, redeemHandler, subscriptionHandler, announcementHandler, channelMonitorUserHandler, channelMonitorV2Handler, adminHandlers, gatewayHandler, openAIGatewayHandler, handlerSettingHandler, totpHandler, passkeyHandler, handlerPaymentHandler, paymentWebhookHandler, availableChannelHandler, modelPlazaHandler, desktopHandler, asyncImageHandler, batchImageHandler, idempotencyCoordinator, idempotencyCleanupService, openAIQuotaAutoResetService)
+ 	jwtAuthMiddleware := middleware.NewJWTAuthMiddleware(authService, userService, settingService, auditLogService)
+ 	optionalJWTAuthMiddleware := middleware.NewOptionalJWTAuthMiddleware(authService, userService, settingService, auditLogService)
+ 	adminAuthMiddleware := middleware.NewAdminAuthMiddleware(authService, userService, settingService, auditLogService)
+diff --git a/backend/internal/handler/desktop_data_handler.go b/backend/internal/handler/desktop_data_handler.go
+new file mode 100644
+index 000000000..b4be11989
+--- /dev/null
++++ b/backend/internal/handler/desktop_data_handler.go
+@@ -0,0 +1,591 @@
++package handler
++
++import (
++	"errors"
++	"math"
++	"net/http"
++	"strconv"
++	"strings"
++	"time"
++
++	"github.com/Wei-Shaw/sub2api/internal/domain"
++	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
++	"github.com/Wei-Shaw/sub2api/internal/pkg/usagestats"
++	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
++	"github.com/Wei-Shaw/sub2api/internal/service"
++	"github.com/gin-gonic/gin"
++)
++
++// The data half of the desktop connect protocol: what the desktop app shows after sign-in.
++// Every amount leaves here already converted to the currency users pay in, so the app never
++// has to learn this project's balance units.
++
++const (
++	desktopService       = "desktop-connect"
++	desktopContractID    = "desktop-connect-v1"
++	desktopBasePath      = "/api/desktop/v2"
++	desktopWalletPath    = "/topup"
++	desktopUsageDays     = 30
++	desktopMaxPageSize   = 100
++	desktopKeyNameMaxLen = 100
++	perMillionTokens     = 1_000_000
++)
++
++// desktopMoney says which currency amounts are reported in. Balances and prices are kept in USD
++// here, the unit the site itself shows, so they leave unchanged.
++type desktopMoney struct {
++	Currency string
++}
++
++func (m desktopMoney) charged(units float64) float64 { return roundMoney(units) }
++
++func (m desktopMoney) official(usd float64) float64 { return roundMoney(usd) }
++
++func roundMoney(v float64) float64 {
++	return math.Round(v*1e6) / 1e6
++}
++
++func (h *DesktopHandler) money(*gin.Context) desktopMoney {
++	return desktopMoney{Currency: "USD"}
++}
++
++// Bootstrap handles GET /api/desktop/v2/bootstrap
++func (h *DesktopHandler) Bootstrap(c *gin.Context) {
++	origin, err := service.CanonicalDesktopOrigin("https://" + c.Request.Host)
++	if err != nil {
++		desktopError(c, http.StatusBadRequest, "connect_origin_invalid")
++		return
++	}
++	desktopOK(c, gin.H{
++		"schema_version":                 2,
++		"service":                        desktopService,
++		"contract_id":                    desktopContractID,
++		"minimum_client_version":         "0.0.0",
++		"device_authorization_available": false,
++		"oauth_loopback_pkce_available":  false,
++		"account_read":                   true,
++		"usage_read":                     true,
++		"models_read":                    true,
++		"pricing_read":                   true,
++		"tool_keys_manage":               true,
++		"session_refresh_path":           desktopBasePath + "/sessions/refresh",
++		"session_logout_path":            desktopBasePath + "/sessions/current",
++		"account_path":                   desktopBasePath + "/account",
++		"plans_path":                     desktopBasePath + "/plans",
++		"keys_path":                      desktopBasePath + "/keys",
++		"usage_summary_path":             desktopBasePath + "/usage/summary",
++		"usage_records_path":             desktopBasePath + "/usage/records",
++		"announcements_path":             desktopBasePath + "/notices",
++		"wallet_url":                     origin + desktopWalletPath,
++	})
++}
++
++type refreshDesktopSessionRequest struct {
++	RefreshToken string `json:"refresh_token"`
++	SessionID    string `json:"session_id"`
++}
++
++// RefreshSession handles POST /api/desktop/v2/sessions/refresh
++func (h *DesktopHandler) RefreshSession(c *gin.Context) {
++	var req refreshDesktopSessionRequest
++	if err := c.ShouldBindJSON(&req); err != nil || req.RefreshToken == "" || req.SessionID == "" {
++		desktopError(c, http.StatusBadRequest, "invalid_request")
++		return
++	}
++	pair, err := h.authService.RefreshTokenPair(c.Request.Context(), req.RefreshToken)
++	if errors.Is(err, service.ErrServiceUnavailable) {
++		// 站点自己的故障，refresh token 没被消费：让客户端稍后重试，而不是当成掉登录。
++		desktopError(c, http.StatusServiceUnavailable, "service_unavailable")
++		return
++	}
++	if err != nil {
++		desktopError(c, http.StatusUnauthorized, "session_expired")
++		return
++	}
++	if h.settingService.IsBackendModeEnabled(c.Request.Context()) && pair.UserRole != service.RoleAdmin {
++		desktopError(c, http.StatusForbidden, "backend_mode")
++		return
++	}
++	now := time.Now()
++	desktopOK(c, gin.H{
++		"access_token":       pair.AccessToken,
++		"token_type":         "Bearer",
++		"access_expires_at":  now.Add(time.Duration(pair.ExpiresIn) * time.Second).Unix(),
++		"refresh_token":      pair.RefreshToken,
++		"refresh_expires_at": now.Add(h.authService.RefreshTokenTTL()).Unix(),
++		"session_id":         req.SessionID,
++	})
++}
++
++// EndSession handles DELETE /api/desktop/v2/sessions/current
++func (h *DesktopHandler) EndSession(c *gin.Context) {
++	if sessionID := c.GetString(middleware2.ContextKeySessionID); sessionID != "" {
++		if err := h.authService.RevokeSessionFamily(c.Request.Context(), sessionID); err != nil {
++			desktopError(c, http.StatusInternalServerError, "internal_error")
++			return
++		}
++	}
++	desktopOK(c, gin.H{})
++}
++
++// Account handles GET /api/desktop/v2/account
++func (h *DesktopHandler) Account(c *gin.Context) {
++	subject, ok := middleware2.GetAuthSubjectFromContext(c)
++	if !ok {
++		desktopError(c, http.StatusUnauthorized, "session_required")
++		return
++	}
++	user, err := h.userService.GetByID(c.Request.Context(), subject.UserID)
++	if err != nil {
++		desktopError(c, http.StatusInternalServerError, "internal_error")
++		return
++	}
++	money := h.money(c)
++	displayName := user.Username
++	if displayName == "" {
++		displayName = user.Email
++	}
++	desktopOK(c, gin.H{
++		"username":    user.Username,
++		"displayName": displayName,
++		"email":       user.Email,
++		"currency":    money.Currency,
++		"balance":     money.charged(user.Balance),
++	})
++}
++
++type desktopPrice struct {
++	Input      *float64 `json:"input,omitempty"`
++	Output     *float64 `json:"output,omitempty"`
++	CacheRead  *float64 `json:"cacheRead,omitempty"`
++	CacheWrite *float64 `json:"cacheWrite,omitempty"`
++	PerRequest *float64 `json:"perRequest,omitempty"`
++}
++
++type desktopLongContextTier struct {
++	FromTokens int          `json:"fromTokens"`
++	ToTokens   *int         `json:"toTokens,omitempty"`
++	Price      desktopPrice `json:"price"`
++}
++
++type desktopPeak struct {
++	Start        string  `json:"start"`
++	End          string  `json:"end"`
++	Multiplier   float64 `json:"multiplier"`
++	Timezone     string  `json:"timezone,omitempty"`
++	WeekdaysOnly bool    `json:"weekdaysOnly,omitempty"`
++}
++
++type desktopPlanModel struct {
++	ID          string                   `json:"id"`
++	Price       *desktopPrice            `json:"price,omitempty"`
++	Official    *desktopPrice            `json:"official,omitempty"`
++	LongContext []desktopLongContextTier `json:"longContext,omitempty"`
++	Peak        []desktopPeak            `json:"peak,omitempty"`
++}
++
++type desktopPlan struct {
++	ID           string             `json:"id"`
++	Name         string             `json:"name"`
++	Description  string             `json:"description"`
++	Platform     string             `json:"platform"`
++	Formats      []string           `json:"formats"`
++	Subscription bool               `json:"subscription"`
++	Multiplier   float64            `json:"multiplier"`
++	Peak         []desktopPeak      `json:"peak,omitempty"`
++	Models       []desktopPlanModel `json:"models"`
++}
++
++// desktopFormats lists the request formats a plan's platform serves natively.
++// An empty list means "not stated": the app finds out by trying.
++func desktopFormats(platform string) []string {
++	switch platform {
++	case domain.PlatformAnthropic:
++		return []string{"anthropic"}
++	case domain.PlatformOpenAI:
++		return []string{"openai-chat", "openai-responses"}
++	case domain.PlatformGemini:
++		return []string{"gemini"}
++	default:
++		return []string{}
++	}
++}
++
++func desktopPerMillion(perToken *float64, convert func(float64) float64, rate float64) *float64 {
++	if perToken == nil {
++		return nil
++	}
++	v := convert(*perToken * rate * perMillionTokens)
++	return &v
++}
++
++func toDesktopPlan(g *service.PlazaGroup, rate float64, money desktopMoney) desktopPlan {
++	plan := desktopPlan{
++		ID:           strconv.FormatInt(g.ID, 10),
++		Name:         g.Name,
++		Description:  g.Description,
++		Platform:     g.Platform,
++		Formats:      desktopFormats(g.Platform),
++		Subscription: g.SubscriptionType == service.SubscriptionTypeSubscription,
++		Multiplier:   rate,
++		Models:       make([]desktopPlanModel, 0, len(g.Models)),
++	}
++	// 与 Group.PeakMultiplierAt 同口径：只有月卡分组按高峰倍率计费，倍率可以是 0（该时段免费）。
++	if plan.Subscription && g.PeakRateEnabled && g.PeakStart != "" && g.PeakEnd != "" &&
++		g.PeakRateMultiplier >= 0 && g.PeakRateMultiplier != 1 {
++		plan.Peak = []desktopPeak{{Start: g.PeakStart, End: g.PeakEnd, Multiplier: g.PeakRateMultiplier}}
++	}
++	for i := range g.Models {
++		m := &g.Models[i]
++		model := desktopPlanModel{ID: m.Name}
++		if p := m.Pricing; p != nil {
++			model.Price = &desktopPrice{
++				Input:      desktopPerMillion(p.InputPrice, money.charged, rate),
++				Output:     desktopPerMillion(p.OutputPrice, money.charged, rate),
++				CacheRead:  desktopPerMillion(p.CacheReadPrice, money.charged, rate),
++				CacheWrite: desktopPerMillion(p.CacheWritePrice, money.charged, rate),
++			}
++			if p.PerRequestPrice != nil {
++				// 图片倍率独立时，按次价乘图片倍率而不是分组/用户倍率，与计费一致。
++				requestRate := rate
++				if p.BillingMode == service.BillingModeImage && g.ImageRateIndependent {
++					requestRate = g.ImageRateMultiplier
++				}
++				v := money.charged(*p.PerRequestPrice * requestRate)
++				model.Price.PerRequest = &v
++			}
++			if g.LongContextPricingEnabled && len(p.Intervals) > 1 {
++				for j := range p.Intervals {
++					tier := &p.Intervals[j]
++					model.LongContext = append(model.LongContext, desktopLongContextTier{
++						FromTokens: tier.MinTokens,
++						ToTokens:   tier.MaxTokens,
++						Price: desktopPrice{
++							Input:      desktopPerMillion(tier.InputPrice, money.charged, rate),
++							Output:     desktopPerMillion(tier.OutputPrice, money.charged, rate),
++							CacheRead:  desktopPerMillion(tier.CacheReadPrice, money.charged, rate),
++							CacheWrite: desktopPerMillion(tier.CacheWritePrice, money.charged, rate),
++						},
++					})
++				}
++			}
++		}
++		if o := m.OfficialPricing; o != nil {
++			model.Official = &desktopPrice{
++				Input:      desktopPerMillion(o.InputPrice, money.official, 1),
++				Output:     desktopPerMillion(o.OutputPrice, money.official, 1),
++				CacheRead:  desktopPerMillion(o.CacheReadPrice, money.official, 1),
++				CacheWrite: desktopPerMillion(o.CacheWritePrice, money.official, 1),
++			}
++		}
++		if t := m.TimePricing; t != nil {
++			for _, period := range t.Periods {
++				model.Peak = append(model.Peak, desktopPeak{
++					Start:        period.StartTime,
++					End:          period.EndTime,
++					Multiplier:   period.Multiplier,
++					Timezone:     t.Timezone,
++					WeekdaysOnly: t.WeekdaysOnly,
++				})
++			}
++		}
++		plan.Models = append(plan.Models, model)
++	}
++	return plan
++}
++
++// Plans handles GET /api/desktop/v2/plans
++func (h *DesktopHandler) Plans(c *gin.Context) {
++	subject, ok := middleware2.GetAuthSubjectFromContext(c)
++	if !ok {
++		desktopError(c, http.StatusUnauthorized, "session_required")
++		return
++	}
++	ctx := c.Request.Context()
++	groups, err := h.plazaService.ListGroups(ctx)
++	if err != nil {
++		desktopError(c, http.StatusInternalServerError, "internal_error")
++		return
++	}
++	// Only plans this user can put a key on: a plan that can be seen but not used is no choice.
++	bindable, err := h.apiKeyService.GetAvailableGroups(ctx, subject.UserID)
++	if err != nil {
++		desktopError(c, http.StatusInternalServerError, "internal_error")
++		return
++	}
++	usable := make(map[int64]struct{}, len(bindable))
++	for i := range bindable {
++		usable[bindable[i].ID] = struct{}{}
++	}
++	visible := make([]service.PlazaGroup, 0, len(groups))
++	for i := range groups {
++		if _, ok := usable[groups[i].ID]; ok {
++			visible = append(visible, groups[i])
++		}
++	}
++	// A rate an admin set for this user wins over the plan rate, as it does when billing.
++	rates, _ := h.apiKeyService.GetUserGroupRates(ctx, subject.UserID)
++
++	money := h.money(c)
++	plans := make([]desktopPlan, 0, len(visible))
++	for i := range visible {
++		g := &visible[i]
++		rate := g.RateMultiplier
++		if manual, ok := rates[g.ID]; ok {
++			rate = manual
++		}
++		plan := toDesktopPlan(g, rate, money)
++		plan.Name, plan.Description = g.I18n.Localize(c.GetHeader("Accept-Language"), plan.Name, plan.Description)
++		plans = append(plans, plan)
++	}
++	desktopOK(c, gin.H{"currency": money.Currency, "plans": plans})
++}
++
++func desktopKeyView(key *service.APIKey) gin.H {
++	planID := ""
++	if key.GroupID != nil {
++		planID = strconv.FormatInt(*key.GroupID, 10)
++	}
++	return gin.H{
++		"id":               strconv.FormatInt(key.ID, 10),
++		"name":             key.Name,
++		"planId":           planID,
++		"status":           key.Status,
++		"createdAtEpochMs": key.CreatedAt.UnixMilli(),
++	}
++}
++
++// ListKeys handles GET /api/desktop/v2/keys
++func (h *DesktopHandler) ListKeys(c *gin.Context) {
++	subject, ok := middleware2.GetAuthSubjectFromContext(c)
++	if !ok {
++		desktopError(c, http.StatusUnauthorized, "session_required")
++		return
++	}
++	out := []gin.H{}
++	for page := 1; ; page++ {
++		keys, result, err := h.apiKeyService.List(c.Request.Context(), subject.UserID,
++			pagination.PaginationParams{Page: page, PageSize: desktopMaxPageSize}, service.APIKeyListFilters{})
++		if err != nil {
++			desktopError(c, http.StatusInternalServerError, "internal_error")
++			return
++		}
++		for i := range keys {
++			out = append(out, desktopKeyView(&keys[i]))
++		}
++		if len(keys) == 0 || result == nil || int64(len(out)) >= result.Total {
++			break
++		}
++	}
++	desktopOK(c, gin.H{"keys": out})
++}
++
++type createDesktopKeyRequest struct {
++	Name   string `json:"name"`
++	PlanID string `json:"planId"`
++}
++
++// CreateKey handles POST /api/desktop/v2/keys
++func (h *DesktopHandler) CreateKey(c *gin.Context) {
++	subject, ok := middleware2.GetAuthSubjectFromContext(c)
++	if !ok {
++		desktopError(c, http.StatusUnauthorized, "session_required")
++		return
++	}
++	var req createDesktopKeyRequest
++	_ = c.ShouldBindJSON(&req)
++	req.Name = strings.TrimSpace(req.Name)
++	planID, err := strconv.ParseInt(req.PlanID, 10, 64)
++	if req.Name == "" || len(req.Name) > desktopKeyNameMaxLen || err != nil || planID <= 0 {
++		desktopError(c, http.StatusBadRequest, "invalid_request")
++		return
++	}
++	key, err := h.apiKeyService.Create(c.Request.Context(), subject.UserID, service.CreateAPIKeyRequest{Name: req.Name, GroupID: &planID})
++	if errors.Is(err, service.ErrGroupNotAllowed) {
++		desktopError(c, http.StatusForbidden, "plan_not_allowed")
++		return
++	}
++	if errors.Is(err, service.ErrAPIKeyCountExceeded) {
++		desktopError(c, http.StatusConflict, "key_limit_reached")
++		return
++	}
++	if errors.Is(err, service.ErrAPIKeyCreateLimited) {
++		desktopError(c, http.StatusTooManyRequests, "rate_limited")
++		return
++	}
++	if err != nil {
++		desktopError(c, http.StatusInternalServerError, "internal_error")
++		return
++	}
++	view := desktopKeyView(key)
++	view["key"] = key.Key
++	desktopOK(c, view)
++}
++
++// ownedDesktopKey returns the caller's key named by the :id path parameter, or answers the request itself.
++func (h *DesktopHandler) ownedDesktopKey(c *gin.Context) (*service.APIKey, bool) {
++	subject, ok := middleware2.GetAuthSubjectFromContext(c)
++	if !ok {
++		desktopError(c, http.StatusUnauthorized, "session_required")
++		return nil, false
++	}
++	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
++	if err != nil || id <= 0 {
++		desktopError(c, http.StatusBadRequest, "invalid_request")
++		return nil, false
++	}
++	key, err := h.apiKeyService.GetByID(c.Request.Context(), id)
++	// A key that belongs to someone else is reported as missing, so ids cannot be probed.
++	if errors.Is(err, service.ErrAPIKeyNotFound) || (err == nil && key.UserID != subject.UserID) {
++		desktopError(c, http.StatusNotFound, "key_not_found")
++		return nil, false
++	}
++	if err != nil {
++		desktopError(c, http.StatusInternalServerError, "internal_error")
++		return nil, false
++	}
++	return key, true
++}
++
++// RevealKey handles POST /api/desktop/v2/keys/:id/reveal
++func (h *DesktopHandler) RevealKey(c *gin.Context) {
++	key, ok := h.ownedDesktopKey(c)
++	if !ok {
++		return
++	}
++	desktopOK(c, gin.H{"key": key.Key})
++}
++
++// DeleteKey handles DELETE /api/desktop/v2/keys/:id
++func (h *DesktopHandler) DeleteKey(c *gin.Context) {
++	key, ok := h.ownedDesktopKey(c)
++	if !ok {
++		return
++	}
++	if err := h.apiKeyService.Delete(c.Request.Context(), key.ID, key.UserID); err != nil && !errors.Is(err, service.ErrAPIKeyNotFound) {
++		desktopError(c, http.StatusInternalServerError, "internal_error")
++		return
++	}
++	desktopOK(c, gin.H{})
++}
++
++// UsageSummary handles GET /api/desktop/v2/usage/summary
++func (h *DesktopHandler) UsageSummary(c *gin.Context) {
++	subject, ok := middleware2.GetAuthSubjectFromContext(c)
++	if !ok {
++		desktopError(c, http.StatusUnauthorized, "session_required")
++		return
++	}
++	end := time.Now()
++	stats, err := h.usageService.GetStatsByUser(c.Request.Context(), subject.UserID, end.AddDate(0, 0, -desktopUsageDays), end)
++	if err != nil {
++		desktopError(c, http.StatusInternalServerError, "internal_error")
++		return
++	}
++	money := h.money(c)
++	desktopOK(c, gin.H{
++		"currency":   money.Currency,
++		"windowDays": desktopUsageDays,
++		"consumed":   money.charged(stats.TotalActualCost),
++		"requests":   stats.TotalRequests,
++		"tokens":     stats.TotalTokens,
++	})
++}
++
++func desktopUsageRecord(log *service.UsageLog, money desktopMoney) gin.H {
++	planID := ""
++	if log.GroupID != nil {
++		planID = strconv.FormatInt(*log.GroupID, 10)
++	}
++	keyName := ""
++	if log.APIKey != nil {
++		keyName = log.APIKey.Name
++	}
++	return gin.H{
++		"id":           strconv.FormatInt(log.ID, 10),
++		"atEpochMs":    log.CreatedAt.UnixMilli(),
++		"model":        log.Model,
++		"planId":       planID,
++		"keyId":        strconv.FormatInt(log.APIKeyID, 10),
++		"keyName":      keyName,
++		"inputTokens":  log.InputTokens,
++		"outputTokens": log.OutputTokens,
++		"cacheTokens":  log.CacheReadTokens + log.CacheCreationTokens,
++		"amount":       money.charged(log.ActualCost),
++	}
++}
++
++func desktopPositiveQuery(c *gin.Context, name string, fallback, maximum int) int {
++	value, err := strconv.Atoi(c.Query(name))
++	if err != nil || value <= 0 {
++		return fallback
++	}
++	return min(value, maximum)
++}
++
++// UsageRecords handles GET /api/desktop/v2/usage/records
++func (h *DesktopHandler) UsageRecords(c *gin.Context) {
++	subject, ok := middleware2.GetAuthSubjectFromContext(c)
++	if !ok {
++		desktopError(c, http.StatusUnauthorized, "session_required")
++		return
++	}
++	page := desktopPositiveQuery(c, "page", 1, math.MaxInt32)
++	pageSize := desktopPositiveQuery(c, "pageSize", desktopMaxPageSize, desktopMaxPageSize)
++	logs, result, err := h.usageService.ListWithFilters(c.Request.Context(),
++		pagination.PaginationParams{Page: page, PageSize: pageSize, SortBy: "created_at", SortOrder: "desc"},
++		usagestats.UsageLogFilters{UserID: subject.UserID})
++	if err != nil {
++		desktopError(c, http.StatusInternalServerError, "internal_error")
++		return
++	}
++	money := h.money(c)
++	records := make([]gin.H, 0, len(logs))
++	for i := range logs {
++		records = append(records, desktopUsageRecord(&logs[i], money))
++	}
++	var total int64
++	if result != nil {
++		total = result.Total
++	}
++	desktopOK(c, gin.H{"currency": money.Currency, "records": records, "total": total, "page": page, "pageSize": pageSize})
++}
++
++func desktopNotice(a *service.UserAnnouncement) gin.H {
++	published := a.Announcement.CreatedAt
++	if a.Announcement.StartsAt != nil {
++		published = *a.Announcement.StartsAt
++	}
++	var expires int64
++	if a.Announcement.EndsAt != nil {
++		expires = a.Announcement.EndsAt.UnixMilli()
++	}
++	return gin.H{
++		"id":                 strconv.FormatInt(a.Announcement.ID, 10),
++		"title":              a.Announcement.Title,
++		"body":               a.Announcement.Content,
++		"severity":           "info",
++		"publishedAtEpochMs": published.UnixMilli(),
++		"expiresAtEpochMs":   expires,
++		"banner":             a.Announcement.NotifyMode == domain.AnnouncementNotifyModePopup,
++	}
++}
++
++// Notices handles GET /api/desktop/v2/notices
++func (h *DesktopHandler) Notices(c *gin.Context) {
++	subject, ok := middleware2.GetAuthSubjectFromContext(c)
++	if !ok {
++		desktopError(c, http.StatusUnauthorized, "session_required")
++		return
++	}
++	items, err := h.announcementService.ListForUser(c.Request.Context(), subject.UserID, false)
++	if err != nil {
++		desktopError(c, http.StatusInternalServerError, "internal_error")
++		return
++	}
++	notices := make([]gin.H, 0, len(items))
++	for i := range items {
++		notices = append(notices, desktopNotice(&items[i]))
++	}
++	desktopOK(c, gin.H{"notices": notices})
++}
+diff --git a/backend/internal/handler/desktop_data_handler_test.go b/backend/internal/handler/desktop_data_handler_test.go
+new file mode 100644
+index 000000000..7749ac098
+--- /dev/null
++++ b/backend/internal/handler/desktop_data_handler_test.go
+@@ -0,0 +1,221 @@
++package handler
++
++import (
++	"encoding/json"
++	"net/http"
++	"net/http/httptest"
++	"strings"
++	"testing"
++	"time"
++
++	"github.com/Wei-Shaw/sub2api/internal/domain"
++	"github.com/Wei-Shaw/sub2api/internal/service"
++	"github.com/gin-gonic/gin"
++	"github.com/stretchr/testify/require"
++)
++
++func desktopFloat(v float64) *float64 { return &v }
++
++func TestDesktopMoneyReportsTheSiteUnitUnchanged(t *testing.T) {
++	usd := (&DesktopHandler{}).money(nil)
++	require.Equal(t, "USD", usd.Currency)
++	require.Equal(t, 12.5, usd.charged(12.5))
++	require.Equal(t, 3.0, usd.official(3))
++}
++
++func TestToDesktopPlanPricesPerMillionTokensWithSurchargesKeptApart(t *testing.T) {
++	maxTokens := 200_000
++	group := &service.PlazaGroup{
++		ID:                        7,
++		Name:                      "Garden",
++		Platform:                  domain.PlatformAnthropic,
++		RateMultiplier:            1,
++		SubscriptionType:          service.SubscriptionTypeSubscription,
++		PeakRateEnabled:           true,
++		PeakStart:                 "09:00",
++		PeakEnd:                   "18:00",
++		PeakRateMultiplier:        1.5,
++		LongContextPricingEnabled: true,
++		Models: []service.PlazaModel{{
++			Name: "model-a",
++			Pricing: &service.ChannelModelPricing{
++				InputPrice:  desktopFloat(0.000003),
++				OutputPrice: desktopFloat(0.000015),
++				Intervals: []service.PricingInterval{
++					{MinTokens: 0, MaxTokens: &maxTokens, InputPrice: desktopFloat(0.000003)},
++					{MinTokens: 200_000, InputPrice: desktopFloat(0.000006)},
++				},
++			},
++			OfficialPricing: &service.PlazaOfficialPricing{InputPrice: desktopFloat(0.000003)},
++			TimePricing: &service.TimePricingSchedule{
++				Timezone: "Asia/Shanghai",
++				Periods:  []service.TimePricingPeriod{{StartTime: "00:00", EndTime: "08:00", Multiplier: 0.5}},
++			},
++		}},
++	}
++	money := desktopMoney{Currency: "USD"}
++
++	plan := toDesktopPlan(group, 0.5, money)
++
++	require.Equal(t, "7", plan.ID)
++	require.Equal(t, []string{"anthropic"}, plan.Formats)
++	require.True(t, plan.Subscription)
++	require.Equal(t, 0.5, plan.Multiplier)
++	require.Equal(t, []desktopPeak{{Start: "09:00", End: "18:00", Multiplier: 1.5}}, plan.Peak)
++
++	require.Len(t, plan.Models, 1)
++	model := plan.Models[0]
++	require.Equal(t, 1.5, *model.Price.Input)
++	require.Equal(t, 7.5, *model.Price.Output)
++	require.Nil(t, model.Price.CacheRead)
++	require.Equal(t, 3.0, *model.Official.Input)
++	require.Len(t, model.LongContext, 2)
++	require.Equal(t, 200_000, *model.LongContext[0].ToTokens)
++	require.Equal(t, 200_000, model.LongContext[1].FromTokens)
++	require.Nil(t, model.LongContext[1].ToTokens)
++	require.Equal(t, 3.0, *model.LongContext[1].Price.Input)
++	require.Equal(t, []desktopPeak{{Start: "00:00", End: "08:00", Multiplier: 0.5, Timezone: "Asia/Shanghai"}}, model.Peak)
++}
++
++func TestToDesktopPlanLeavesOutWhatDoesNotApply(t *testing.T) {
++	group := &service.PlazaGroup{
++		ID:                 3,
++		Platform:           "something-else",
++		SubscriptionType:   service.SubscriptionTypeSubscription,
++		PeakRateEnabled:    true,
++		PeakRateMultiplier: 1,
++		Models: []service.PlazaModel{{
++			Name: "per-call",
++			Pricing: &service.ChannelModelPricing{
++				PerRequestPrice: desktopFloat(0.02),
++				Intervals:       []service.PricingInterval{{MinTokens: 0}, {MinTokens: 100}},
++			},
++		}},
++	}
++
++	plan := toDesktopPlan(group, 2, desktopMoney{Currency: "USD"})
++
++	require.True(t, plan.Subscription)
++	require.Empty(t, plan.Formats)
++	require.NotNil(t, plan.Formats, "unknown formats are an empty list, not null")
++	require.Nil(t, plan.Peak, "a peak multiplier of 1 is not a surcharge")
++	require.Equal(t, 0.04, *plan.Models[0].Price.PerRequest)
++	require.Nil(t, plan.Models[0].LongContext, "tiers are not billed unless the plan turns them on")
++	require.Nil(t, plan.Models[0].Official)
++}
++
++func TestToDesktopPlanShowsPeakHoursOnlyWhereTheyAreBilled(t *testing.T) {
++	peak := func(subscriptionType string, multiplier float64) []desktopPeak {
++		return toDesktopPlan(&service.PlazaGroup{
++			ID:                 1,
++			SubscriptionType:   subscriptionType,
++			PeakRateEnabled:    true,
++			PeakStart:          "01:00",
++			PeakEnd:            "05:00",
++			PeakRateMultiplier: multiplier,
++		}, 1, desktopMoney{Currency: "USD"}).Peak
++	}
++
++	require.Equal(t, []desktopPeak{{Start: "01:00", End: "05:00", Multiplier: 0}},
++		peak(service.SubscriptionTypeSubscription, 0), "a free window is still a peak period")
++	require.Nil(t, peak(service.SubscriptionTypeStandard, 1.5), "billing ignores peak hours outside subscription plans")
++}
++
++func TestToDesktopPlanPricesIndependentImagesWithTheImageMultiplier(t *testing.T) {
++	perImage := 0.04
++	plan := func(independent bool) desktopPlan {
++		return toDesktopPlan(&service.PlazaGroup{
++			ID:                   1,
++			ImageRateIndependent: independent,
++			ImageRateMultiplier:  0.5,
++			Models: []service.PlazaModel{{
++				Name:    "image-model",
++				Pricing: &service.ChannelModelPricing{BillingMode: service.BillingModeImage, PerRequestPrice: &perImage},
++			}},
++		}, 2, desktopMoney{Currency: "USD"})
++	}
++
++	require.InDelta(t, 0.02, *plan(true).Models[0].Price.PerRequest, 1e-9)
++	require.InDelta(t, 0.08, *plan(false).Models[0].Price.PerRequest, 1e-9)
++}
++
++func TestDesktopNoticeMapsAnnouncementToTheProtocolShape(t *testing.T) {
++	created := time.UnixMilli(1_700_000_000_000)
++	starts := time.UnixMilli(1_700_000_100_000)
++	ends := time.UnixMilli(1_700_000_200_000)
++
++	popup := desktopNotice(&service.UserAnnouncement{Announcement: service.Announcement{
++		ID: 9, Title: "T", Content: "B", NotifyMode: domain.AnnouncementNotifyModePopup,
++		StartsAt: &starts, EndsAt: &ends, CreatedAt: created,
++	}})
++	require.Equal(t, gin.H{
++		"id": "9", "title": "T", "body": "B", "severity": "info",
++		"publishedAtEpochMs": int64(1_700_000_100_000), "expiresAtEpochMs": int64(1_700_000_200_000), "banner": true,
++	}, popup)
++
++	silent := desktopNotice(&service.UserAnnouncement{Announcement: service.Announcement{
++		ID: 10, Title: "T", NotifyMode: domain.AnnouncementNotifyModeSilent, CreatedAt: created,
++	}})
++	require.Equal(t, int64(1_700_000_000_000), silent["publishedAtEpochMs"])
++	require.Equal(t, int64(0), silent["expiresAtEpochMs"])
++	require.Equal(t, false, silent["banner"])
++}
++
++func TestDesktopUsageRecordReportsTheAmountCharged(t *testing.T) {
++	groupID := int64(4)
++	record := desktopUsageRecord(&service.UsageLog{
++		ID: 11, APIKeyID: 5, Model: "model-a", GroupID: &groupID,
++		InputTokens: 100, OutputTokens: 20, CacheReadTokens: 7, CacheCreationTokens: 3,
++		TotalCost: 9, ActualCost: 3, CreatedAt: time.UnixMilli(1_700_000_000_000),
++		APIKey: &service.APIKey{Name: "Codex"},
++	}, desktopMoney{Currency: "USD"})
++
++	require.Equal(t, gin.H{
++		"id": "11", "atEpochMs": int64(1_700_000_000_000), "model": "model-a", "planId": "4",
++		"keyId": "5", "keyName": "Codex", "inputTokens": 100, "outputTokens": 20, "cacheTokens": 10, "amount": 3.0,
++	}, record)
++}
++
++func TestDesktopBootstrapDescribesTheStation(t *testing.T) {
++	gin.SetMode(gin.TestMode)
++	router := gin.New()
++	router.GET("/api/desktop/v2/bootstrap", (&DesktopHandler{}).Bootstrap)
++
++	req := httptest.NewRequest(http.MethodGet, "/api/desktop/v2/bootstrap", nil)
++	req.Host = "relay.example.com"
++	rec := httptest.NewRecorder()
++	router.ServeHTTP(rec, req)
++
++	require.Equal(t, http.StatusOK, rec.Code)
++	require.Equal(t, "no-store", rec.Header().Get("Cache-Control"))
++	var body struct {
++		Success bool           `json:"success"`
++		Data    map[string]any `json:"data"`
++	}
++	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
++	require.True(t, body.Success)
++	require.Equal(t, "desktop-connect", body.Data["service"])
++	require.Equal(t, "desktop-connect-v1", body.Data["contract_id"])
++	require.Equal(t, float64(2), body.Data["schema_version"])
++	require.Equal(t, "https://relay.example.com/topup", body.Data["wallet_url"])
++	for key, value := range body.Data {
++		if strings.HasSuffix(key, "_path") {
++			path, ok := value.(string)
++			require.Truef(t, ok && strings.HasPrefix(path, "/api/desktop/v2/"), "%s = %v", key, value)
++		}
++	}
++	require.NotContains(t, strings.ToLower(rec.Body.String()), "yeschoy", "the protocol names no particular station")
++}
++
++func TestDesktopRefreshSessionRejectsIncompleteRequests(t *testing.T) {
++	gin.SetMode(gin.TestMode)
++	router := gin.New()
++	router.POST("/refresh", (&DesktopHandler{}).RefreshSession)
++
++	for _, payload := range []string{``, `{}`, `{"refresh_token":"rt"}`, `{"session_id":"s"}`} {
++		rec := httptest.NewRecorder()
++		router.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/refresh", strings.NewReader(payload)))
++		require.Equal(t, http.StatusBadRequest, rec.Code, payload)
++		require.JSONEq(t, `{"success":false,"code":"invalid_request"}`, rec.Body.String())
++	}
++}
+diff --git a/backend/internal/handler/desktop_handler.go b/backend/internal/handler/desktop_handler.go
+new file mode 100644
+index 000000000..bca5b23e2
+--- /dev/null
++++ b/backend/internal/handler/desktop_handler.go
+@@ -0,0 +1,176 @@
++package handler
++
++import (
++	"bytes"
++	"encoding/json"
++	"errors"
++	"net/http"
++	"strings"
++
++	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
++	"github.com/Wei-Shaw/sub2api/internal/service"
++
++	"github.com/gin-gonic/gin"
++)
++
++// DesktopHandler is the station side of the desktop assistant's connect protocol.
++// Its responses use the protocol's own envelope ({success, data} / {success, code}),
++// not this project's usual one, because the desktop app parses them strictly.
++type DesktopHandler struct {
++	connectService      *service.DesktopConnectService
++	authService         *service.AuthService
++	userService         *service.UserService
++	apiKeyService       *service.APIKeyService
++	plazaService        *service.ModelPlazaService
++	usageService        *service.UsageService
++	announcementService *service.AnnouncementService
++	settingService      *service.SettingService
++}
++
++func NewDesktopHandler(
++	connectService *service.DesktopConnectService,
++	authService *service.AuthService,
++	userService *service.UserService,
++	apiKeyService *service.APIKeyService,
++	plazaService *service.ModelPlazaService,
++	usageService *service.UsageService,
++	announcementService *service.AnnouncementService,
++	settingService *service.SettingService,
++) *DesktopHandler {
++	return &DesktopHandler{
++		connectService:      connectService,
++		authService:         authService,
++		userService:         userService,
++		apiKeyService:       apiKeyService,
++		plazaService:        plazaService,
++		usageService:        usageService,
++		announcementService: announcementService,
++		settingService:      settingService,
++	}
++}
++
++type issueConnectCodeRequest struct {
++	Origin string `json:"origin"`
++}
++
++type exchangeConnectCodeRequest struct {
++	Code string `json:"code"`
++}
++
++func desktopError(c *gin.Context, status int, code string) {
++	c.AbortWithStatusJSON(status, gin.H{"success": false, "code": code})
++}
++
++func desktopOK(c *gin.Context, data gin.H) {
++	c.Header("Cache-Control", "no-store")
++	c.JSON(http.StatusOK, gin.H{"success": true, "data": data})
++}
++
++// desktopResponseBuffer holds a response back so ProtocolErrors can rewrite it.
++type desktopResponseBuffer struct {
++	gin.ResponseWriter
++	status int
++	body   bytes.Buffer
++}
++
++func (w *desktopResponseBuffer) WriteHeader(status int)         { w.status = status }
++func (w *desktopResponseBuffer) WriteHeaderNow()                {}
++func (w *desktopResponseBuffer) Status() int                    { return w.status }
++func (w *desktopResponseBuffer) Write(data []byte) (int, error) { return w.body.Write(data) }
++func (w *desktopResponseBuffer) WriteString(data string) (int, error) {
++	return w.body.WriteString(data)
++}
++
++// ProtocolErrors makes failures raised by shared middleware (sign-in checks, rate limits) answer in
++// the protocol's envelope too; those middlewares otherwise write this project's own error shapes.
++func (h *DesktopHandler) ProtocolErrors(c *gin.Context) {
++	buffer := &desktopResponseBuffer{ResponseWriter: c.Writer, status: http.StatusOK}
++	c.Writer = buffer
++	c.Next()
++	c.Writer = buffer.ResponseWriter
++
++	body := buffer.body.Bytes()
++	if buffer.status >= http.StatusBadRequest {
++		var parsed map[string]any
++		_ = json.Unmarshal(body, &parsed)
++		if _, isProtocol := parsed["success"]; !isProtocol {
++			code := "request_failed"
++			switch {
++			case buffer.status == http.StatusUnauthorized:
++				code = "session_required"
++			case buffer.status == http.StatusTooManyRequests:
++				code = "rate_limited"
++			case buffer.status >= http.StatusInternalServerError:
++				code = "internal_error"
++			default:
++				if reason, ok := parsed["code"].(string); ok && reason != "" {
++					code = strings.ToLower(reason)
++				}
++			}
++			body, _ = json.Marshal(gin.H{"success": false, "code": code})
++			c.Header("Content-Type", "application/json; charset=utf-8")
++		}
++	}
++	c.Writer.WriteHeader(buffer.status)
++	_, _ = c.Writer.Write(body)
++}
++
++// IssueConnectCode handles POST /api/desktop/v2/connect-codes
++func (h *DesktopHandler) IssueConnectCode(c *gin.Context) {
++	subject, ok := middleware2.GetAuthSubjectFromContext(c)
++	if !ok {
++		desktopError(c, http.StatusUnauthorized, "session_required")
++		return
++	}
++	var req issueConnectCodeRequest
++	_ = c.ShouldBindJSON(&req)
++	if req.Origin == "" {
++		req.Origin = c.GetHeader("Origin")
++	}
++	issued, err := h.connectService.IssueCode(c.Request.Context(), subject.UserID, req.Origin)
++	if errors.Is(err, service.ErrDesktopOriginInvalid) {
++		desktopError(c, http.StatusBadRequest, "connect_origin_invalid")
++		return
++	}
++	if err != nil {
++		desktopError(c, http.StatusInternalServerError, "internal_error")
++		return
++	}
++	desktopOK(c, gin.H{
++		"code":       issued.Code,
++		"origin":     issued.Origin,
++		"expiresAt":  issued.ExpiresAt.Unix(),
++		"ttlSeconds": int(service.DesktopConnectCodeTTL.Seconds()),
++	})
++}
++
++// ExchangeConnectCode handles POST /api/desktop/v2/connect-codes/exchange
++func (h *DesktopHandler) ExchangeConnectCode(c *gin.Context) {
++	var req exchangeConnectCodeRequest
++	if err := c.ShouldBindJSON(&req); err != nil || len(req.Code) < 32 || len(req.Code) > 512 {
++		desktopError(c, http.StatusBadRequest, "connect_code_expired")
++		return
++	}
++	bundle, err := h.connectService.Exchange(c.Request.Context(), req.Code, c.Request.Host)
++	switch {
++	case errors.Is(err, service.ErrDesktopCodeAlreadyUsed):
++		desktopError(c, http.StatusConflict, "connect_code_already_used")
++	case errors.Is(err, service.ErrDesktopCodeExpired):
++		desktopError(c, http.StatusBadRequest, "connect_code_expired")
++	case errors.Is(err, service.ErrDesktopOriginMismatch):
++		desktopError(c, http.StatusForbidden, "connect_origin_mismatch")
++	case errors.Is(err, service.ErrUserNotActive):
++		desktopError(c, http.StatusForbidden, "user_inactive")
++	case err != nil:
++		desktopError(c, http.StatusInternalServerError, "internal_error")
++	default:
++		desktopOK(c, gin.H{
++			"accessToken":      bundle.AccessToken,
++			"tokenType":        "Bearer",
++			"accessExpiresAt":  bundle.AccessExpiresAt.Unix(),
++			"refreshToken":     bundle.RefreshToken,
++			"refreshExpiresAt": bundle.RefreshExpiresAt.Unix(),
++			"sessionId":        bundle.SessionID,
++		})
++	}
++}
+diff --git a/backend/internal/handler/desktop_handler_test.go b/backend/internal/handler/desktop_handler_test.go
+new file mode 100644
+index 000000000..024294717
+--- /dev/null
++++ b/backend/internal/handler/desktop_handler_test.go
+@@ -0,0 +1,85 @@
++package handler
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"testing"
++
++	"github.com/gin-gonic/gin"
++	"github.com/stretchr/testify/require"
++)
++
++// Shared middleware answers in this project's own shapes; the desktop routes must still
++// speak the connect protocol, which the desktop app parses strictly.
++func TestDesktopProtocolErrorsRewritesForeignFailures(t *testing.T) {
++	gin.SetMode(gin.TestMode)
++	cases := []struct {
++		name       string
++		respond    func(c *gin.Context)
++		wantStatus int
++		wantBody   string
++	}{
++		{
++			name: "expired sign-in from the JWT middleware",
++			respond: func(c *gin.Context) {
++				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"code": "TOKEN_EXPIRED", "message": "token has expired"})
++			},
++			wantStatus: http.StatusUnauthorized,
++			wantBody:   `{"success":false,"code":"session_required"}`,
++		},
++		{
++			name: "rate limit",
++			respond: func(c *gin.Context) {
++				c.Header("Retry-After", "7")
++				c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "rate limit exceeded", "message": "Too many requests"})
++			},
++			wantStatus: http.StatusTooManyRequests,
++			wantBody:   `{"success":false,"code":"rate_limited"}`,
++		},
++		{
++			name: "other refusal keeps its reason",
++			respond: func(c *gin.Context) {
++				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"code": "USER_INACTIVE", "message": "disabled"})
++			},
++			wantStatus: http.StatusForbidden,
++			wantBody:   `{"success":false,"code":"user_inactive"}`,
++		},
++		{
++			name:       "protocol error passes through",
++			respond:    func(c *gin.Context) { desktopError(c, http.StatusConflict, "connect_code_already_used") },
++			wantStatus: http.StatusConflict,
++			wantBody:   `{"success":false,"code":"connect_code_already_used"}`,
++		},
++		{
++			name:       "success passes through",
++			respond:    func(c *gin.Context) { desktopOK(c, gin.H{"code": "abc"}) },
++			wantStatus: http.StatusOK,
++			wantBody:   `{"success":true,"data":{"code":"abc"}}`,
++		},
++	}
++	for _, tc := range cases {
++		t.Run(tc.name, func(t *testing.T) {
++			router := gin.New()
++			router.POST("/x", (&DesktopHandler{}).ProtocolErrors, tc.respond)
++			rec := httptest.NewRecorder()
++			router.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/x", nil))
++
++			require.Equal(t, tc.wantStatus, rec.Code)
++			require.JSONEq(t, tc.wantBody, rec.Body.String())
++		})
++	}
++}
++
++func TestDesktopProtocolErrorsKeepsRetryAfter(t *testing.T) {
++	gin.SetMode(gin.TestMode)
++	router := gin.New()
++	router.POST("/x", (&DesktopHandler{}).ProtocolErrors, func(c *gin.Context) {
++		c.Header("Retry-After", "7")
++		c.AbortWithStatus(http.StatusTooManyRequests)
++	})
++	rec := httptest.NewRecorder()
++	router.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/x", nil))
++
++	require.Equal(t, "7", rec.Header().Get("Retry-After"))
++	require.JSONEq(t, `{"success":false,"code":"rate_limited"}`, rec.Body.String())
++}
+diff --git a/backend/internal/handler/handler.go b/backend/internal/handler/handler.go
+index 6e11effe0..6a31281d4 100644
+--- a/backend/internal/handler/handler.go
++++ b/backend/internal/handler/handler.go
+@@ -67,6 +67,7 @@ type Handlers struct {
+ 	PaymentWebhook   *PaymentWebhookHandler
+ 	AvailableChannel *AvailableChannelHandler
+ 	ModelPlaza       *ModelPlazaHandler
++	Desktop          *DesktopHandler
+ 	AsyncImage       *AsyncImageHandler
+ 	BatchImage       *BatchImageHandler
+ }
+diff --git a/backend/internal/handler/wire.go b/backend/internal/handler/wire.go
+index 86b21a01f..b79506392 100644
+--- a/backend/internal/handler/wire.go
++++ b/backend/internal/handler/wire.go
+@@ -201,6 +201,7 @@ func ProvideHandlers(
+ 	paymentWebhookHandler *PaymentWebhookHandler,
+ 	availableChannelHandler *AvailableChannelHandler,
+ 	modelPlazaHandler *ModelPlazaHandler,
++	desktopHandler *DesktopHandler,
+ 	asyncImageHandler *AsyncImageHandler,
+ 	batchImageHandler *BatchImageHandler,
+ 	_ *service.IdempotencyCoordinator,
+@@ -228,6 +229,7 @@ func ProvideHandlers(
+ 		PaymentWebhook:   paymentWebhookHandler,
+ 		AvailableChannel: availableChannelHandler,
+ 		ModelPlaza:       modelPlazaHandler,
++		Desktop:          desktopHandler,
+ 		AsyncImage:       asyncImageHandler,
+ 		BatchImage:       batchImageHandler,
+ 	}
+@@ -255,6 +257,7 @@ var ProviderSet = wire.NewSet(
+ 	NewPaymentWebhookHandler,
+ 	NewAvailableChannelHandler,
+ 	NewModelPlazaHandler,
++	NewDesktopHandler,
+ 	NewAsyncImageHandler,
+ 	ProvideBatchImageHandler,
+ 
+diff --git a/backend/internal/repository/desktop_connect_code_store.go b/backend/internal/repository/desktop_connect_code_store.go
+new file mode 100644
+index 000000000..b8e4998f3
+--- /dev/null
++++ b/backend/internal/repository/desktop_connect_code_store.go
+@@ -0,0 +1,68 @@
++package repository
++
++import (
++	"context"
++	"encoding/json"
++	"fmt"
++	"time"
++
++	"github.com/Wei-Shaw/sub2api/internal/service"
++	"github.com/redis/go-redis/v9"
++)
++
++const (
++	desktopConnectCodePrefix     = "desktop_connect_code:"
++	desktopConnectCodeUsedPrefix = "desktop_connect_code_used:"
++	desktopConnectCodeUsedMark   = "used"
++)
++
++// consumeDesktopConnectCodeScript hands a code to exactly one caller and remembers that it
++// was used, so a replay is reported as "already used" rather than "expired".
++var consumeDesktopConnectCodeScript = redis.NewScript(`
++	local value = redis.call('GET', KEYS[1])
++	if value then
++		redis.call('DEL', KEYS[1])
++		redis.call('SET', KEYS[2], '1', 'EX', ARGV[1])
++		return value
++	end
++	if redis.call('EXISTS', KEYS[2]) == 1 then
++		return ARGV[2]
++	end
++	return nil
++`)
++
++type desktopConnectCodeStore struct {
++	rdb *redis.Client
++}
++
++func NewDesktopConnectCodeStore(rdb *redis.Client) service.DesktopConnectCodeStore {
++	return &desktopConnectCodeStore{rdb: rdb}
++}
++
++func (s *desktopConnectCodeStore) Save(ctx context.Context, codeHash string, code service.DesktopConnectCode, ttl time.Duration) error {
++	val, err := json.Marshal(code)
++	if err != nil {
++		return fmt.Errorf("marshal desktop connect code: %w", err)
++	}
++	return s.rdb.Set(ctx, desktopConnectCodePrefix+codeHash, val, ttl).Err()
++}
++
++func (s *desktopConnectCodeStore) Consume(ctx context.Context, codeHash string) (*service.DesktopConnectCode, error) {
++	keys := []string{desktopConnectCodePrefix + codeHash, desktopConnectCodeUsedPrefix + codeHash}
++	val, err := consumeDesktopConnectCodeScript.Run(ctx, s.rdb, keys,
++		int(service.DesktopConnectCodeTTL.Seconds()), desktopConnectCodeUsedMark).Text()
++	if err == redis.Nil {
++		return nil, service.ErrDesktopCodeExpired
++	}
++	if err != nil {
++		return nil, err
++	}
++	if val == desktopConnectCodeUsedMark {
++		return nil, service.ErrDesktopCodeAlreadyUsed
++	}
++	var code service.DesktopConnectCode
++	if err := json.Unmarshal([]byte(val), &code); err != nil {
++		return nil, fmt.Errorf("unmarshal desktop connect code: %w", err)
++	}
++	return &code, nil
++}
+diff --git a/backend/internal/repository/wire.go b/backend/internal/repository/wire.go
+index 786392193..eca664f5c 100644
+--- a/backend/internal/repository/wire.go
++++ b/backend/internal/repository/wire.go
+@@ -79,6 +79,7 @@ var ProviderSet = wire.NewSet(
+ 	NewRedeemCodeRepository,
+ 	NewPromoCodeRepository,
+ 	NewAnnouncementRepository,
++	NewDesktopConnectCodeStore,
+ 	NewAnnouncementReadRepository,
+ 	NewUsageLogRepository,
+ 	NewUsageBillingRepository,
+diff --git a/backend/internal/server/router.go b/backend/internal/server/router.go
+index 8dcc7ab94..60f6569ea 100644
+--- a/backend/internal/server/router.go
++++ b/backend/internal/server/router.go
+@@ -126,6 +126,7 @@ func registerRoutes(
+ 	// 注册各模块路由
+ 	routes.RegisterAuthRoutes(v1, h, jwtAuth, auditLog, redisClient, settingService, panelRateLimiter)
+ 	routes.RegisterUserRoutes(v1, h, jwtAuth, auditLog, settingService, panelRateLimiter)
++	routes.RegisterDesktopRoutes(r, h, jwtAuth, redisClient, settingService)
+ 	routes.RegisterModelPlazaRoutes(v1, h, optionalJWTAuth, settingService, panelRateLimiter)
+ 	routes.RegisterAdminRoutes(v1, h, adminAuth, auditLog, stepUpAuth, settingService, panelRateLimiter)
+ 	routes.RegisterMCPRoutes(v1, h, auditLog, stepUpAuth, settingService, panelRateLimiter, cfg.CORS.AllowedOrigins, redisClient)
+diff --git a/backend/internal/server/routes/desktop.go b/backend/internal/server/routes/desktop.go
+new file mode 100644
+index 000000000..c0315c72c
+--- /dev/null
++++ b/backend/internal/server/routes/desktop.go
+@@ -0,0 +1,53 @@
++package routes
++
++import (
++	"time"
++
++	"github.com/Wei-Shaw/sub2api/internal/handler"
++	"github.com/Wei-Shaw/sub2api/internal/middleware"
++	servermiddleware "github.com/Wei-Shaw/sub2api/internal/server/middleware"
++	"github.com/Wei-Shaw/sub2api/internal/service"
++
++	"github.com/gin-gonic/gin"
++	"github.com/redis/go-redis/v9"
++)
++
++// RegisterDesktopRoutes 注册桌面助手“一键连接”协议的站点侧接口。
++// 路径由桌面助手的公开协议规定，所以不在 /api/v1 下。
++func RegisterDesktopRoutes(r *gin.Engine, h *handler.Handlers, jwtAuth servermiddleware.JWTAuthMiddleware, redisClient *redis.Client, settingService *service.SettingService) {
++	rateLimiter := middleware.NewRateLimiter(redisClient)
++	desktop := r.Group("/api/desktop/v2")
++	desktop.Use(h.Desktop.ProtocolErrors)
++
++	// 换取会话：由桌面助手调用，无登录态，凭一次性连接码。
++	desktop.POST("/connect-codes/exchange", rateLimiter.LimitWithOptions("desktop-connect-exchange", 20, time.Minute, middleware.RateLimitOptions{
++		FailureMode: middleware.RateLimitFailClose,
++	}), h.Desktop.ExchangeConnectCode)
++
++	// 站点自述：桌面助手靠它认出这个站支持授权连接，以及各接口在哪。
++	desktop.GET("/bootstrap", h.Desktop.Bootstrap)
++	// 续登录：凭 refresh token，无登录态。
++	desktop.POST("/sessions/refresh", rateLimiter.LimitWithOptions("desktop-session-refresh", 30, time.Minute, middleware.RateLimitOptions{
++		FailureMode: middleware.RateLimitFailClose,
++	}), h.Desktop.RefreshSession)
++
++	signedIn := desktop.Group("")
++	signedIn.Use(gin.HandlerFunc(jwtAuth))
++	// 退出登录始终可用；其余接口在后端模式下只对管理员开放，与 /api/v1 的用户接口一致。
++	signedIn.DELETE("/sessions/current", h.Desktop.EndSession)
++	signedIn.Use(servermiddleware.BackendModeUserGuard(settingService))
++	signedIn.GET("/account", h.Desktop.Account)
++	signedIn.GET("/plans", h.Desktop.Plans)
++	signedIn.GET("/keys", h.Desktop.ListKeys)
++	signedIn.POST("/keys", rateLimiter.LimitWithOptions("desktop-key-create", 30, time.Minute, middleware.RateLimitOptions{
++		FailureMode: middleware.RateLimitFailClose,
++	}), h.Desktop.CreateKey)
++	signedIn.POST("/keys/:id/reveal", h.Desktop.RevealKey)
++	signedIn.DELETE("/keys/:id", h.Desktop.DeleteKey)
++	signedIn.GET("/usage/summary", h.Desktop.UsageSummary)
++	signedIn.GET("/usage/records", h.Desktop.UsageRecords)
++	signedIn.GET("/notices", h.Desktop.Notices)
++	signedIn.POST("/connect-codes", rateLimiter.LimitWithOptions("desktop-connect-issue", 20, time.Minute, middleware.RateLimitOptions{
++		FailureMode: middleware.RateLimitFailClose,
++	}), h.Desktop.IssueConnectCode)
++}
+diff --git a/backend/internal/service/desktop_connect.go b/backend/internal/service/desktop_connect.go
+new file mode 100644
+index 000000000..ba5e3f6ab
+--- /dev/null
++++ b/backend/internal/service/desktop_connect.go
+@@ -0,0 +1,167 @@
++package service
++
++import (
++	"context"
++	"crypto/rand"
++	"crypto/sha256"
++	"encoding/base64"
++	"encoding/hex"
++	"errors"
++	"net"
++	"net/url"
++	"strings"
++	"time"
++)
++
++// 桌面助手“一键连接”的站点侧实现，接口形状遵循桌面助手公开的
++// station-connect 协议（见 yeschoy-ai-desktop/docs/station-connect-api.openapi.yaml）。
++
++const (
++	// DesktopConnectCodeTTL 是一次性连接码的有效期，协议要求不超过 300 秒。
++	DesktopConnectCodeTTL = 300 * time.Second
++)
++
++var (
++	ErrDesktopOriginInvalid   = errors.New("connect_origin_invalid")
++	ErrDesktopCodeExpired     = errors.New("connect_code_expired")
++	ErrDesktopCodeAlreadyUsed = errors.New("connect_code_already_used")
++	ErrDesktopOriginMismatch  = errors.New("connect_origin_mismatch")
++)
++
++// DesktopConnectCode is what a one-time code resolves to.
++type DesktopConnectCode struct {
++	UserID int64  `json:"user_id"`
++	Origin string `json:"origin"`
++	// The user's token version when the code was issued: a password change revokes the code
++	// together with the session that asked for it.
++	TokenVersion int64 `json:"token_version"`
++}
++
++// DesktopConnectCodeStore keeps one-time codes; Consume must hand a code to exactly one caller.
++type DesktopConnectCodeStore interface {
++	Save(ctx context.Context, codeHash string, code DesktopConnectCode, ttl time.Duration) error
++	// Consume returns ErrDesktopCodeAlreadyUsed for a code that was consumed before and
++	// ErrDesktopCodeExpired for an unknown or expired one.
++	Consume(ctx context.Context, codeHash string) (*DesktopConnectCode, error)
++}
++
++type DesktopIssuedCode struct {
++	Code      string
++	Origin    string
++	ExpiresAt time.Time
++}
++
++type DesktopAuthBundle struct {
++	AccessToken      string
++	RefreshToken     string
++	SessionID        string
++	AccessExpiresAt  time.Time
++	RefreshExpiresAt time.Time
++}
++
++type DesktopConnectService struct {
++	codes       DesktopConnectCodeStore
++	userRepo    UserRepository
++	authService *AuthService
++}
++
++func NewDesktopConnectService(codes DesktopConnectCodeStore, userRepo UserRepository, authService *AuthService) *DesktopConnectService {
++	return &DesktopConnectService{codes: codes, userRepo: userRepo, authService: authService}
++}
++
++// CanonicalDesktopOrigin validates an origin against the protocol: https only, no userinfo,
++// no explicit port, no path/query/fragment, and a DNS host name rather than an IP literal.
++func CanonicalDesktopOrigin(raw string) (string, error) {
++	parsed, err := url.Parse(strings.TrimSpace(raw))
++	if err != nil || parsed.Scheme != "https" || parsed.User != nil || parsed.Port() != "" ||
++		parsed.RawQuery != "" || parsed.Fragment != "" || (parsed.Path != "" && parsed.Path != "/") {
++		return "", ErrDesktopOriginInvalid
++	}
++	host := strings.ToLower(parsed.Hostname())
++	if host == "" || net.ParseIP(host) != nil {
++		return "", ErrDesktopOriginInvalid
++	}
++	return "https://" + host, nil
++}
++
++func randomURLSafeToken() (string, error) {
++	buf := make([]byte, 32)
++	if _, err := rand.Read(buf); err != nil {
++		return "", err
++	}
++	return base64.RawURLEncoding.EncodeToString(buf), nil
++}
++
++func hashDesktopSecret(secret string) string {
++	sum := sha256.Sum256([]byte(secret))
++	return hex.EncodeToString(sum[:])
++}
++
++// IssueCode creates a one-time code for the signed-in user, bound to the station origin.
++func (s *DesktopConnectService) IssueCode(ctx context.Context, userID int64, origin string) (*DesktopIssuedCode, error) {
++	canonical, err := CanonicalDesktopOrigin(origin)
++	if err != nil {
++		return nil, err
++	}
++	user, err := s.userRepo.GetByID(ctx, userID)
++	if err != nil {
++		return nil, err
++	}
++	code, err := randomURLSafeToken()
++	if err != nil {
++		return nil, err
++	}
++	issued := DesktopConnectCode{UserID: userID, Origin: canonical, TokenVersion: resolvedTokenVersion(user)}
++	if err := s.codes.Save(ctx, hashDesktopSecret(code), issued, DesktopConnectCodeTTL); err != nil {
++		return nil, err
++	}
++	return &DesktopIssuedCode{Code: code, Origin: canonical, ExpiresAt: time.Now().Add(DesktopConnectCodeTTL)}, nil
++}
++
++// Exchange turns a one-time code into a normal sign-in session for the desktop app.
++// requestHost is the Host the app actually called; it must be the host the code was issued for.
++func (s *DesktopConnectService) Exchange(ctx context.Context, code, requestHost string) (*DesktopAuthBundle, error) {
++	issued, err := s.codes.Consume(ctx, hashDesktopSecret(code))
++	if err != nil {
++		return nil, err
++	}
++	host := strings.ToLower(requestHost)
++	if h, _, splitErr := net.SplitHostPort(host); splitErr == nil {
++		host = h
++	}
++	if "https://"+host != issued.Origin {
++		return nil, ErrDesktopOriginMismatch
++	}
++	user, err := s.userRepo.GetByID(ctx, issued.UserID)
++	if err != nil {
++		return nil, err
++	}
++	if !user.IsActive() {
++		return nil, ErrUserNotActive
++	}
++	if issued.TokenVersion != resolvedTokenVersion(user) {
++		return nil, ErrDesktopCodeExpired
++	}
++	sessionBytes := make([]byte, 16)
++	if _, err := rand.Read(sessionBytes); err != nil {
++		return nil, err
++	}
++	sessionID := hex.EncodeToString(sessionBytes)
++	pair, err := s.authService.GenerateTokenPair(ctx, user, sessionID)
++	if err != nil {
++		return nil, err
++	}
++	now := time.Now()
++	return &DesktopAuthBundle{
++		AccessToken:      pair.AccessToken,
++		RefreshToken:     pair.RefreshToken,
++		SessionID:        sessionID,
++		AccessExpiresAt:  now.Add(time.Duration(pair.ExpiresIn) * time.Second),
++		RefreshExpiresAt: now.Add(s.authService.RefreshTokenTTL()),
++	}, nil
++}
++
++// RefreshTokenTTL is how long a refresh token issued now stays valid.
++func (s *AuthService) RefreshTokenTTL() time.Duration {
++	return time.Duration(s.cfg.JWT.RefreshTokenExpireDays) * 24 * time.Hour
++}
+diff --git a/backend/internal/service/desktop_connect_test.go b/backend/internal/service/desktop_connect_test.go
+new file mode 100644
+index 000000000..4c38c8dbe
+--- /dev/null
++++ b/backend/internal/service/desktop_connect_test.go
+@@ -0,0 +1,119 @@
++package service
++
++import (
++	"context"
++	"errors"
++	"testing"
++	"time"
++)
++
++type fakeDesktopCodeStore struct {
++	codes map[string]DesktopConnectCode
++	used  map[string]bool
++}
++
++func newFakeDesktopCodeStore() *fakeDesktopCodeStore {
++	return &fakeDesktopCodeStore{codes: map[string]DesktopConnectCode{}, used: map[string]bool{}}
++}
++
++func (s *fakeDesktopCodeStore) Save(_ context.Context, codeHash string, code DesktopConnectCode, _ time.Duration) error {
++	s.codes[codeHash] = code
++	return nil
++}
++
++func (s *fakeDesktopCodeStore) Consume(_ context.Context, codeHash string) (*DesktopConnectCode, error) {
++	if code, ok := s.codes[codeHash]; ok {
++		delete(s.codes, codeHash)
++		s.used[codeHash] = true
++		return &code, nil
++	}
++	if s.used[codeHash] {
++		return nil, ErrDesktopCodeAlreadyUsed
++	}
++	return nil, ErrDesktopCodeExpired
++}
++
++func TestCanonicalDesktopOrigin(t *testing.T) {
++	valid := map[string]string{
++		"https://yeschoy.com":  "https://yeschoy.com",
++		"https://YesChoy.com/": "https://yeschoy.com",
++	}
++	for in, want := range valid {
++		got, err := CanonicalDesktopOrigin(in)
++		if err != nil || got != want {
++			t.Errorf("CanonicalDesktopOrigin(%q) = %q, %v; want %q", in, got, err, want)
++		}
++	}
++	invalid := []string{
++		"", "http://yeschoy.com", "https://user:pw@yeschoy.com", "https://yeschoy.com:443", "https://yeschoy.com:8443",
++		"https://yeschoy.com/path", "https://yeschoy.com?x=1", "https://yeschoy.com#frag", "https://127.0.0.1", "https://[::1]", "yeschoy.com",
++	}
++	for _, in := range invalid {
++		if _, err := CanonicalDesktopOrigin(in); !errors.Is(err, ErrDesktopOriginInvalid) {
++			t.Errorf("CanonicalDesktopOrigin(%q) error = %v; want ErrDesktopOriginInvalid", in, err)
++		}
++	}
++}
++
++type fakeDesktopUserRepo struct {
++	UserRepository
++	users map[int64]*User
++}
++
++func (r *fakeDesktopUserRepo) GetByID(_ context.Context, id int64) (*User, error) {
++	user, ok := r.users[id]
++	if !ok {
++		return nil, ErrUserNotFound
++	}
++	return user, nil
++}
++
++func newFakeDesktopUserRepo() *fakeDesktopUserRepo {
++	return &fakeDesktopUserRepo{users: map[int64]*User{
++		7: {ID: 7, Email: "u7@example.com", PasswordHash: "hash-before", Status: StatusActive},
++	}}
++}
++
++func TestDesktopConnectIssueCodeRejectsInvalidOrigin(t *testing.T) {
++	svc := NewDesktopConnectService(newFakeDesktopCodeStore(), nil, nil)
++	if _, err := svc.IssueCode(context.Background(), 1, "http://yeschoy.com"); !errors.Is(err, ErrDesktopOriginInvalid) {
++		t.Fatalf("IssueCode error = %v; want ErrDesktopOriginInvalid", err)
++	}
++}
++
++// A code asked for before a password change must not sign anyone in after it.
++func TestDesktopConnectExchangeRejectsCodeIssuedBeforePasswordChange(t *testing.T) {
++	users := newFakeDesktopUserRepo()
++	svc := NewDesktopConnectService(newFakeDesktopCodeStore(), users, nil)
++	ctx := context.Background()
++	issued, err := svc.IssueCode(ctx, 7, "https://yeschoy.com")
++	if err != nil {
++		t.Fatalf("IssueCode: %v", err)
++	}
++	users.users[7].PasswordHash = "hash-after"
++	if _, err := svc.Exchange(ctx, issued.Code, "yeschoy.com"); !errors.Is(err, ErrDesktopCodeExpired) {
++		t.Fatalf("Exchange after a password change error = %v; want ErrDesktopCodeExpired", err)
++	}
++}
++
++func TestDesktopConnectExchangeRejectsWrongHostAndBurnsTheCode(t *testing.T) {
++	svc := NewDesktopConnectService(newFakeDesktopCodeStore(), newFakeDesktopUserRepo(), nil)
++	ctx := context.Background()
++	issued, err := svc.IssueCode(ctx, 7, "https://yeschoy.com")
++	if err != nil {
++		t.Fatalf("IssueCode: %v", err)
++	}
++	if len(issued.Code) < 32 || issued.Origin != "https://yeschoy.com" {
++		t.Fatalf("issued = %+v", issued)
++	}
++	if _, err := svc.Exchange(ctx, issued.Code, "evil.example:443"); !errors.Is(err, ErrDesktopOriginMismatch) {
++		t.Fatalf("Exchange on another host error = %v; want ErrDesktopOriginMismatch", err)
++	}
++	if _, err := svc.Exchange(ctx, issued.Code, "yeschoy.com"); !errors.Is(err, ErrDesktopCodeAlreadyUsed) {
++		t.Fatalf("second Exchange error = %v; want ErrDesktopCodeAlreadyUsed", err)
++	}
++	if _, err := svc.Exchange(ctx, "never-issued-code-never-issued-code-0000", "yeschoy.com"); !errors.Is(err, ErrDesktopCodeExpired) {
++		t.Fatalf("unknown code error = %v; want ErrDesktopCodeExpired", err)
++	}
++}
++
+diff --git a/backend/internal/service/wire.go b/backend/internal/service/wire.go
+index efa0c2587..9576dbcd3 100644
+--- a/backend/internal/service/wire.go
++++ b/backend/internal/service/wire.go
+@@ -980,6 +980,7 @@ var ProviderSet = wire.NewSet(
+ 	wire.Bind(new(ChannelCacheInvalidator), new(*ChannelService)),
+ 	NewModelPricingResolver,
+ 	NewModelPlazaService,
++	NewDesktopConnectService,
+ 	NewContentModerationService,
+ 	NewAffiliateService,
+ 	ProvidePaymentConfigService,
+diff --git a/frontend/src/api/desktop.ts b/frontend/src/api/desktop.ts
+new file mode 100644
+index 000000000..7a8fc22c2
+--- /dev/null
++++ b/frontend/src/api/desktop.ts
+@@ -0,0 +1,43 @@
++/**
++ * Station side of the desktop app's connect protocol.
++ * These paths and their { success, data } envelope are fixed by that protocol, so they sit outside /api/v1.
++ */
++
++import { apiClient } from './client'
++import { buildGatewayUrl } from './url'
++
++export interface ConnectCode {
++  code: string
++  origin: string
++  expiresAt: number
++  ttlSeconds: number
++}
++
++const CONNECT_CODES_URL = buildGatewayUrl('/api/desktop/v2/connect-codes')
++
++/**
++ * The origin the desktop app will talk to: the backend's, which is not the page's
++ * when the site and its API are served from different hosts.
++ */
++export function stationOrigin(): string {
++  return new URL(CONNECT_CODES_URL, window.location.origin).origin
++}
++
++export async function issueConnectCode(): Promise<ConnectCode> {
++  const { data } = await apiClient.post<{ success: boolean; data: ConnectCode }>(CONNECT_CODES_URL, {
++    origin: stationOrigin()
++  })
++  return data.data
++}
++
++/** The link that hands a one-time code to the installed desktop app. */
++export function connectDeepLink(connect: Pick<ConnectCode, 'code' | 'origin'>): string {
++  return `yeschoy://connect?origin=${encodeURIComponent(connect.origin)}&code=${encodeURIComponent(connect.code)}`
++}
++
++/** Asks the operating system to open the desktop app with this code. */
++export function openDesktopApp(connect: Pick<ConnectCode, 'code' | 'origin'>): void {
++  window.location.href = connectDeepLink(connect)
++}
++
++export default { stationOrigin, issueConnectCode, connectDeepLink, openDesktopApp }
+diff --git a/frontend/src/i18n/locales/en/misc.ts b/frontend/src/i18n/locales/en/misc.ts
+index 0888751a0..38273b062 100644
+--- a/frontend/src/i18n/locales/en/misc.ts
++++ b/frontend/src/i18n/locales/en/misc.ts
+@@ -629,5 +629,13 @@ export default {
+       },
+     },
+   },
+-
++  desktopConnect: {
++    title: 'Connect the desktop app',
++    description: 'Hand this account to the desktop app installed on this computer. After you click the button, your browser asks to open the app.',
++    connect: 'Open the app and connect',
++    connecting: 'Connecting…',
++    handedOver: 'Handed to the app. If nothing happened, check that the app is installed and click again.',
++    needsHttps: 'The site must be served over HTTPS for the app to connect.',
++    failed: 'Could not connect. Please try again later.',
++  },
+ }
+diff --git a/frontend/src/i18n/locales/zh/misc.ts b/frontend/src/i18n/locales/zh/misc.ts
+index 2c6152473..1bc31eac4 100644
+--- a/frontend/src/i18n/locales/zh/misc.ts
++++ b/frontend/src/i18n/locales/zh/misc.ts
+@@ -653,5 +653,13 @@ export default {
+       },
+     },
+   },
+-
++  desktopConnect: {
++    title: '连接桌面客户端',
++    description: '把这个账号交给本机装好的桌面客户端。点下面的按钮后，浏览器会请你打开客户端。',
++    connect: '打开客户端并连接',
++    connecting: '正在连接…',
++    handedOver: '已经交给客户端。没反应的话，先确认客户端已安装，再点一次。',
++    needsHttps: '站点要用 HTTPS 访问，客户端才能连接。',
++    failed: '连接失败，请稍后再试。',
++  },
+ }
+diff --git a/frontend/src/router/index.ts b/frontend/src/router/index.ts
+index d163d9cba..989adc492 100644
+--- a/frontend/src/router/index.ts
++++ b/frontend/src/router/index.ts
+@@ -203,6 +203,18 @@ const routes: RouteRecordRaw[] = [
+       descriptionKey: 'dashboard.welcomeMessage'
+     }
+   },
++  {
++    // The address the desktop app opens; fixed by the desktop connect protocol.
++    path: '/desktop/connect',
++    name: 'DesktopConnect',
++    component: () => import('@/views/user/DesktopConnectView.vue'),
++    meta: {
++      requiresAuth: true,
++      requiresAdmin: false,
++      title: 'Connect the desktop app',
++      titleKey: 'desktopConnect.title'
++    }
++  },
+   {
+     path: '/keys',
+     name: 'Keys',
+diff --git a/frontend/src/views/user/DesktopConnectView.vue b/frontend/src/views/user/DesktopConnectView.vue
+new file mode 100644
+index 000000000..54f0b5bc8
+--- /dev/null
++++ b/frontend/src/views/user/DesktopConnectView.vue
+@@ -0,0 +1,54 @@
++<template>
++  <AppLayout>
++    <div class="mx-auto max-w-xl">
++      <div class="card p-6 text-center">
++        <h1 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t('desktopConnect.title') }}</h1>
++        <p class="mt-2 text-sm text-gray-500 dark:text-dark-400">{{ t('desktopConnect.description') }}</p>
++        <button type="button" class="btn btn-primary mt-6" :disabled="handingOver" @click="connectApp">
++          {{ handingOver ? t('desktopConnect.connecting') : t('desktopConnect.connect') }}
++        </button>
++        <p v-if="handedOver" class="mt-4 text-sm text-gray-500 dark:text-dark-400">{{ t('desktopConnect.handedOver') }}</p>
++      </div>
++    </div>
++  </AppLayout>
++</template>
++
++<script setup lang="ts">
++import { onMounted, ref } from 'vue'
++import { useI18n } from 'vue-i18n'
++import { useRoute, useRouter } from 'vue-router'
++import AppLayout from '@/components/layout/AppLayout.vue'
++import { useAppStore } from '@/stores/app'
++import { issueConnectCode, openDesktopApp, stationOrigin } from '@/api/desktop'
++
++const { t } = useI18n()
++const appStore = useAppStore()
++const route = useRoute()
++const router = useRouter()
++const handingOver = ref(false)
++const handedOver = ref(false)
++
++async function connectApp() {
++  if (!stationOrigin().startsWith('https://')) {
++    appStore.showError(t('desktopConnect.needsHttps'))
++    return
++  }
++  handingOver.value = true
++  try {
++    openDesktopApp(await issueConnectCode())
++    handedOver.value = true
++  } catch {
++    appStore.showError(t('desktopConnect.failed'))
++  } finally {
++    handingOver.value = false
++  }
++}
++
++// The desktop app opens /desktop/connect?auto=1: hand over without another click.
++// The flag is dropped so reloading the page does not hand over again.
++onMounted(() => {
++  if (route.query.auto !== '1') return
++  void router.replace({ path: route.path, query: { ...route.query, auto: undefined } })
++  void connectApp()
++})
++</script>
