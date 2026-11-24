@@ -23,10 +23,10 @@ index 2835089f9..d7580380d 100644
  	adminAuthMiddleware := middleware.NewAdminAuthMiddleware(authService, userService, settingService, auditLogService)
 diff --git a/backend/internal/handler/desktop_data_handler.go b/backend/internal/handler/desktop_data_handler.go
 new file mode 100644
-index 000000000..95378c2af
+index 000000000..05298b5c9
 --- /dev/null
 +++ b/backend/internal/handler/desktop_data_handler.go
-@@ -0,0 +1,606 @@
+@@ -0,0 +1,615 @@
 +package handler
 +
 +import (
@@ -298,18 +298,25 @@ index 000000000..95378c2af
 +				v := money.charged(*perRequest * requestRate)
 +				model.Price.PerRequest = &v
 +			}
-+			if g.LongContextPricingEnabled && p.BillingMode != service.BillingModeImage && len(p.Intervals) > 1 {
++			// 按 Token 计费的上下文分档受分组开关控制；按次计费总是按上下文选档（calculatePerRequestCost）。
++			perRequestTiers := p.BillingMode == service.BillingModePerRequest && len(p.Intervals) > 0
++			if perRequestTiers || (g.LongContextPricingEnabled && p.BillingMode != service.BillingModeImage && len(p.Intervals) > 1) {
 +				for j := range p.Intervals {
 +					tier := &p.Intervals[j]
++					price := desktopPrice{
++						Input:      desktopPerMillion(tier.InputPrice, money.charged, rate),
++						Output:     desktopPerMillion(tier.OutputPrice, money.charged, rate),
++						CacheRead:  desktopPerMillion(tier.CacheReadPrice, money.charged, rate),
++						CacheWrite: desktopPerMillion(tier.CacheWritePrice, money.charged, rate),
++					}
++					if perRequestTiers && tier.PerRequestPrice != nil {
++						v := money.charged(*tier.PerRequestPrice * rate)
++						price.PerRequest = &v
++					}
 +					model.LongContext = append(model.LongContext, desktopLongContextTier{
 +						FromTokens: tier.MinTokens,
 +						ToTokens:   tier.MaxTokens,
-+						Price: desktopPrice{
-+							Input:      desktopPerMillion(tier.InputPrice, money.charged, rate),
-+							Output:     desktopPerMillion(tier.OutputPrice, money.charged, rate),
-+							CacheRead:  desktopPerMillion(tier.CacheReadPrice, money.charged, rate),
-+							CacheWrite: desktopPerMillion(tier.CacheWritePrice, money.charged, rate),
-+						},
++						Price:      price,
 +					})
 +				}
 +			}
@@ -576,9 +583,11 @@ index 000000000..95378c2af
 +	}
 +	page := desktopPositiveQuery(c, "page", 1, math.MaxInt32)
 +	pageSize := desktopPositiveQuery(c, "pageSize", desktopMaxPageSize, desktopMaxPageSize)
++	end := time.Now()
++	start := end.AddDate(0, 0, -desktopUsageDays)
 +	logs, result, err := h.usageService.ListWithFilters(c.Request.Context(),
 +		pagination.PaginationParams{Page: page, PageSize: pageSize, SortBy: "created_at", SortOrder: "desc"},
-+		usagestats.UsageLogFilters{UserID: subject.UserID})
++		usagestats.UsageLogFilters{UserID: subject.UserID, StartTime: &start, EndTime: &end})
 +	if err != nil {
 +		desktopError(c, http.StatusInternalServerError, "internal_error")
 +		return
@@ -635,10 +644,10 @@ index 000000000..95378c2af
 +}
 diff --git a/backend/internal/handler/desktop_data_handler_test.go b/backend/internal/handler/desktop_data_handler_test.go
 new file mode 100644
-index 000000000..f46769693
+index 000000000..db42e0c21
 --- /dev/null
 +++ b/backend/internal/handler/desktop_data_handler_test.go
-@@ -0,0 +1,242 @@
+@@ -0,0 +1,270 @@
 +package handler
 +
 +import (
@@ -881,12 +890,40 @@ index 000000000..f46769693
 +	require.Equal(t, 0.1, *plan.Models[0].Price.PerRequest, "the 2K tier is what an unsized request is billed")
 +	require.Nil(t, plan.Models[0].LongContext, "resolution tiers are not context-length tiers")
 +}
++
++func TestToDesktopPlanListsPerRequestContextTiers(t *testing.T) {
++	maxTokens := 128_000
++	group := &service.PlazaGroup{
++		ID:       9,
++		Platform: domain.PlatformOpenAI,
++		Models: []service.PlazaModel{{
++			Name: "per-call",
++			Pricing: &service.ChannelModelPricing{
++				BillingMode:     service.BillingModePerRequest,
++				PerRequestPrice: desktopFloat(0.05),
++				Intervals: []service.PricingInterval{
++					{MinTokens: 0, MaxTokens: &maxTokens, PerRequestPrice: desktopFloat(0.05)},
++					{MinTokens: 128_000, PerRequestPrice: desktopFloat(0.10)},
++				},
++			},
++		}},
++	}
++
++	plan := toDesktopPlan(group, 0.5, desktopMoney{Currency: "CNY"})
++
++	model := plan.Models[0]
++	require.Equal(t, 0.025, *model.Price.PerRequest)
++	require.Len(t, model.LongContext, 2)
++	require.Equal(t, 0.025, *model.LongContext[0].Price.PerRequest)
++	require.Equal(t, 128_000, model.LongContext[1].FromTokens)
++	require.Equal(t, 0.05, *model.LongContext[1].Price.PerRequest)
++}
 diff --git a/backend/internal/handler/desktop_handler.go b/backend/internal/handler/desktop_handler.go
 new file mode 100644
-index 000000000..bca5b23e2
+index 000000000..59beca30a
 --- /dev/null
 +++ b/backend/internal/handler/desktop_handler.go
-@@ -0,0 +1,176 @@
+@@ -0,0 +1,179 @@
 +package handler
 +
 +import (
@@ -1040,7 +1077,8 @@ index 000000000..bca5b23e2
 +		desktopError(c, http.StatusBadRequest, "connect_code_expired")
 +		return
 +	}
-+	bundle, err := h.connectService.Exchange(c.Request.Context(), req.Code, c.Request.Host)
++	ctx := c.Request.Context()
++	bundle, err := h.connectService.Exchange(ctx, req.Code, c.Request.Host, h.settingService.IsBackendModeEnabled(ctx))
 +	switch {
 +	case errors.Is(err, service.ErrDesktopCodeAlreadyUsed):
 +		desktopError(c, http.StatusConflict, "connect_code_already_used")
@@ -1050,6 +1088,8 @@ index 000000000..bca5b23e2
 +		desktopError(c, http.StatusForbidden, "connect_origin_mismatch")
 +	case errors.Is(err, service.ErrUserNotActive):
 +		desktopError(c, http.StatusForbidden, "user_inactive")
++	case errors.Is(err, service.ErrDesktopBackendMode):
++		desktopError(c, http.StatusForbidden, "backend_mode")
 +	case err != nil:
 +		desktopError(c, http.StatusInternalServerError, "internal_error")
 +	default:
@@ -1294,10 +1334,10 @@ index 8dcc7ab94..67edff39f 100644
  	routes.RegisterMCPRoutes(v1, h, auditLog, stepUpAuth, settingService, panelRateLimiter, cfg.CORS.AllowedOrigins, redisClient)
 diff --git a/backend/internal/server/routes/desktop.go b/backend/internal/server/routes/desktop.go
 new file mode 100644
-index 000000000..774cb85d7
+index 000000000..6dd95c2d9
 --- /dev/null
 +++ b/backend/internal/server/routes/desktop.go
-@@ -0,0 +1,54 @@
+@@ -0,0 +1,55 @@
 +package routes
 +
 +import (
@@ -1337,7 +1377,8 @@ index 000000000..774cb85d7
 +	signedIn.DELETE("/sessions/current", h.Desktop.EndSession)
 +	signedIn.Use(servermiddleware.BackendModeUserGuard(settingService))
 +	signedIn.GET("/account", h.Desktop.Account)
-+	signedIn.GET("/plans", h.Desktop.Plans)
++	// 方案要读渠道、分组并逐个解析价格，同样按重查询限流。
++	signedIn.GET("/plans", panelRateLimiter.Heavy(), h.Desktop.Plans)
 +	signedIn.GET("/keys", h.Desktop.ListKeys)
 +	signedIn.POST("/keys", rateLimiter.LimitWithOptions("desktop-key-create", 30, time.Minute, middleware.RateLimitOptions{
 +		FailureMode: middleware.RateLimitFailClose,
@@ -1354,10 +1395,10 @@ index 000000000..774cb85d7
 +}
 diff --git a/backend/internal/service/desktop_connect.go b/backend/internal/service/desktop_connect.go
 new file mode 100644
-index 000000000..ba5e3f6ab
+index 000000000..8bbb91bea
 --- /dev/null
 +++ b/backend/internal/service/desktop_connect.go
-@@ -0,0 +1,167 @@
+@@ -0,0 +1,173 @@
 +package service
 +
 +import (
@@ -1386,6 +1427,7 @@ index 000000000..ba5e3f6ab
 +	ErrDesktopCodeExpired     = errors.New("connect_code_expired")
 +	ErrDesktopCodeAlreadyUsed = errors.New("connect_code_already_used")
 +	ErrDesktopOriginMismatch  = errors.New("connect_origin_mismatch")
++	ErrDesktopBackendMode     = errors.New("backend_mode")
 +)
 +
 +// DesktopConnectCode is what a one-time code resolves to.
@@ -1480,7 +1522,9 @@ index 000000000..ba5e3f6ab
 +
 +// Exchange turns a one-time code into a normal sign-in session for the desktop app.
 +// requestHost is the Host the app actually called; it must be the host the code was issued for.
-+func (s *DesktopConnectService) Exchange(ctx context.Context, code, requestHost string) (*DesktopAuthBundle, error) {
++// adminOnly is the station's backend mode at exchange time: a code issued before it was switched on
++// must not sign a regular user in.
++func (s *DesktopConnectService) Exchange(ctx context.Context, code, requestHost string, adminOnly bool) (*DesktopAuthBundle, error) {
 +	issued, err := s.codes.Consume(ctx, hashDesktopSecret(code))
 +	if err != nil {
 +		return nil, err
@@ -1498,6 +1542,9 @@ index 000000000..ba5e3f6ab
 +	}
 +	if !user.IsActive() {
 +		return nil, ErrUserNotActive
++	}
++	if adminOnly && !user.IsAdmin() {
++		return nil, ErrDesktopBackendMode
 +	}
 +	if issued.TokenVersion != resolvedTokenVersion(user) {
 +		return nil, ErrDesktopCodeExpired
@@ -1527,10 +1574,10 @@ index 000000000..ba5e3f6ab
 +}
 diff --git a/backend/internal/service/desktop_connect_test.go b/backend/internal/service/desktop_connect_test.go
 new file mode 100644
-index 000000000..4c38c8dbe
+index 000000000..fc1d9d2b2
 --- /dev/null
 +++ b/backend/internal/service/desktop_connect_test.go
-@@ -0,0 +1,119 @@
+@@ -0,0 +1,130 @@
 +package service
 +
 +import (
@@ -1624,7 +1671,7 @@ index 000000000..4c38c8dbe
 +		t.Fatalf("IssueCode: %v", err)
 +	}
 +	users.users[7].PasswordHash = "hash-after"
-+	if _, err := svc.Exchange(ctx, issued.Code, "yeschoy.com"); !errors.Is(err, ErrDesktopCodeExpired) {
++	if _, err := svc.Exchange(ctx, issued.Code, "yeschoy.com", false); !errors.Is(err, ErrDesktopCodeExpired) {
 +		t.Fatalf("Exchange after a password change error = %v; want ErrDesktopCodeExpired", err)
 +	}
 +}
@@ -1639,17 +1686,28 @@ index 000000000..4c38c8dbe
 +	if len(issued.Code) < 32 || issued.Origin != "https://yeschoy.com" {
 +		t.Fatalf("issued = %+v", issued)
 +	}
-+	if _, err := svc.Exchange(ctx, issued.Code, "evil.example:443"); !errors.Is(err, ErrDesktopOriginMismatch) {
++	if _, err := svc.Exchange(ctx, issued.Code, "evil.example:443", false); !errors.Is(err, ErrDesktopOriginMismatch) {
 +		t.Fatalf("Exchange on another host error = %v; want ErrDesktopOriginMismatch", err)
 +	}
-+	if _, err := svc.Exchange(ctx, issued.Code, "yeschoy.com"); !errors.Is(err, ErrDesktopCodeAlreadyUsed) {
++	if _, err := svc.Exchange(ctx, issued.Code, "yeschoy.com", false); !errors.Is(err, ErrDesktopCodeAlreadyUsed) {
 +		t.Fatalf("second Exchange error = %v; want ErrDesktopCodeAlreadyUsed", err)
 +	}
-+	if _, err := svc.Exchange(ctx, "never-issued-code-never-issued-code-0000", "yeschoy.com"); !errors.Is(err, ErrDesktopCodeExpired) {
++	if _, err := svc.Exchange(ctx, "never-issued-code-never-issued-code-0000", "yeschoy.com", false); !errors.Is(err, ErrDesktopCodeExpired) {
 +		t.Fatalf("unknown code error = %v; want ErrDesktopCodeExpired", err)
 +	}
 +}
 +
++func TestDesktopConnectExchangeRefusesRegularUsersInBackendMode(t *testing.T) {
++	svc := NewDesktopConnectService(newFakeDesktopCodeStore(), newFakeDesktopUserRepo(), nil)
++	ctx := context.Background()
++	issued, err := svc.IssueCode(ctx, 7, "https://yeschoy.com")
++	if err != nil {
++		t.Fatalf("IssueCode: %v", err)
++	}
++	if _, err := svc.Exchange(ctx, issued.Code, "yeschoy.com", true); !errors.Is(err, ErrDesktopBackendMode) {
++		t.Fatalf("Exchange in backend mode error = %v; want ErrDesktopBackendMode", err)
++	}
++}
 diff --git a/backend/internal/service/wire.go b/backend/internal/service/wire.go
 index efa0c2587..9576dbcd3 100644
 --- a/backend/internal/service/wire.go
