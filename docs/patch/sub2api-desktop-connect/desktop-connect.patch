@@ -1245,23 +1245,23 @@ index 786392193..eca664f5c 100644
  	NewUsageLogRepository,
  	NewUsageBillingRepository,
 diff --git a/backend/internal/server/router.go b/backend/internal/server/router.go
-index 8dcc7ab94..60f6569ea 100644
+index 8dcc7ab94..67edff39f 100644
 --- a/backend/internal/server/router.go
 +++ b/backend/internal/server/router.go
 @@ -126,6 +126,7 @@ func registerRoutes(
  	// 注册各模块路由
  	routes.RegisterAuthRoutes(v1, h, jwtAuth, auditLog, redisClient, settingService, panelRateLimiter)
  	routes.RegisterUserRoutes(v1, h, jwtAuth, auditLog, settingService, panelRateLimiter)
-+	routes.RegisterDesktopRoutes(r, h, jwtAuth, redisClient, settingService)
++	routes.RegisterDesktopRoutes(r, h, jwtAuth, redisClient, settingService, panelRateLimiter)
  	routes.RegisterModelPlazaRoutes(v1, h, optionalJWTAuth, settingService, panelRateLimiter)
  	routes.RegisterAdminRoutes(v1, h, adminAuth, auditLog, stepUpAuth, settingService, panelRateLimiter)
  	routes.RegisterMCPRoutes(v1, h, auditLog, stepUpAuth, settingService, panelRateLimiter, cfg.CORS.AllowedOrigins, redisClient)
 diff --git a/backend/internal/server/routes/desktop.go b/backend/internal/server/routes/desktop.go
 new file mode 100644
-index 000000000..c0315c72c
+index 000000000..774cb85d7
 --- /dev/null
 +++ b/backend/internal/server/routes/desktop.go
-@@ -0,0 +1,53 @@
+@@ -0,0 +1,54 @@
 +package routes
 +
 +import (
@@ -1278,7 +1278,7 @@ index 000000000..c0315c72c
 +
 +// RegisterDesktopRoutes 注册桌面助手“一键连接”协议的站点侧接口。
 +// 路径由桌面助手的公开协议规定，所以不在 /api/v1 下。
-+func RegisterDesktopRoutes(r *gin.Engine, h *handler.Handlers, jwtAuth servermiddleware.JWTAuthMiddleware, redisClient *redis.Client, settingService *service.SettingService) {
++func RegisterDesktopRoutes(r *gin.Engine, h *handler.Handlers, jwtAuth servermiddleware.JWTAuthMiddleware, redisClient *redis.Client, settingService *service.SettingService, panelRateLimiter *servermiddleware.PanelRateLimiter) {
 +	rateLimiter := middleware.NewRateLimiter(redisClient)
 +	desktop := r.Group("/api/desktop/v2")
 +	desktop.Use(h.Desktop.ProtocolErrors)
@@ -1308,8 +1308,9 @@ index 000000000..c0315c72c
 +	}), h.Desktop.CreateKey)
 +	signedIn.POST("/keys/:id/reveal", h.Desktop.RevealKey)
 +	signedIn.DELETE("/keys/:id", h.Desktop.DeleteKey)
-+	signedIn.GET("/usage/summary", h.Desktop.UsageSummary)
-+	signedIn.GET("/usage/records", h.Desktop.UsageRecords)
++	// 用量是重查询，与 /api/v1/usage 一样叠加按用户限流。
++	signedIn.GET("/usage/summary", panelRateLimiter.Heavy(), h.Desktop.UsageSummary)
++	signedIn.GET("/usage/records", panelRateLimiter.Heavy(), h.Desktop.UsageRecords)
 +	signedIn.GET("/notices", h.Desktop.Notices)
 +	signedIn.POST("/connect-codes", rateLimiter.LimitWithOptions("desktop-connect-issue", 20, time.Minute, middleware.RateLimitOptions{
 +		FailureMode: middleware.RateLimitFailClose,
