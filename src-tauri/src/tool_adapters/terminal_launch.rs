@@ -104,6 +104,9 @@ fn with_arguments(program: String, arguments: &[&str]) -> String {
         .join(" ")
 }
 
+/// 终端里起的命令行工具不继承 YesChoy 的环境，回环例外要在脚本里自己加。
+const MAC_LOOPBACK_NO_PROXY: &str = "yc_no_proxy=\"${NO_PROXY:-${no_proxy:-}}\"\n[ \"$yc_no_proxy\" = '*' ] || yc_no_proxy=\"${yc_no_proxy:+$yc_no_proxy,}127.0.0.1,localhost,::1\"\nNO_PROXY=\"$yc_no_proxy\"\nno_proxy=\"$yc_no_proxy\"\nexport NO_PROXY no_proxy\n";
+
 fn mac_shell_command(
     executable: &str,
     workspace: &str,
@@ -131,7 +134,7 @@ fn mac_shell_command(
         .collect::<Vec<_>>()
         .join(" || ");
     format!(
-        "cd -- {} || exit 1\nunset ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY\nPATH={path}\nexport PATH\n{invocation}",
+        "cd -- {} || exit 1\nunset ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY\nPATH={path}\nexport PATH\n{MAC_LOOPBACK_NO_PROXY}{invocation}",
         quoted_shell(workspace),
     )
 }
