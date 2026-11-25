@@ -428,10 +428,13 @@ fn launch_with(
 }
 
 fn execute(plan: &LaunchPlan) -> Result<(), AdapterFailure> {
+    let no_proxy = common::loopback_no_proxy();
     let mut command = Command::new(&plan.program);
     command
         .args(&plan.args)
-        .current_dir(&plan.working_directory);
+        .current_dir(&plan.working_directory)
+        .env("NO_PROXY", &no_proxy)
+        .env("no_proxy", &no_proxy);
     if !plan.new_console {
         command
             .stdin(std::process::Stdio::null())

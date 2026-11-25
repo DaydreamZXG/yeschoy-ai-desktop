@@ -68,7 +68,10 @@ impl Launcher for NativeLauncher {
     fn spawn_executable(&mut self, path: &Path) -> Result<(), AdapterFailure> {
         #[cfg(target_os = "windows")]
         {
+            let no_proxy = super::common::loopback_no_proxy();
             Command::new(path)
+                .env("NO_PROXY", &no_proxy)
+                .env("no_proxy", &no_proxy)
                 .stdin(Stdio::null())
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())

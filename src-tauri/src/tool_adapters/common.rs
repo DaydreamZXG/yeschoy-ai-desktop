@@ -814,6 +814,28 @@ pub(crate) async fn run_bounded(
     }
 }
 
+/// 工具连本机桥走 127.0.0.1。有的工具会照搬系统代理、却不认代理的例外列表，
+/// 把发给本机桥的请求也交给代理；由 YesChoy 打开的工具一律带上回环例外。
+pub(crate) fn loopback_no_proxy() -> String {
+    loopback_no_proxy_from(env::var("NO_PROXY").or_else(|_| env::var("no_proxy")).ok())
+}
+
+fn loopback_no_proxy_from(existing: Option<String>) -> String {
+    let mut hosts: Vec<String> = existing
+        .unwrap_or_default()
+        .split(',')
+        .map(str::trim)
+        .filter(|host| !host.is_empty())
+        .map(str::to_owned)
+        .collect();
+    for loopback in ["127.0.0.1", "localhost", "::1"] {
+        if !hosts.iter().any(|host| host.eq_ignore_ascii_case(loopback)) {
+            hosts.push(loopback.to_owned());
+        }
+    }
+    hosts.join(",")
+}
+
 #[cfg(test)]
 pub(crate) fn temporary_working_directory(label: &str) -> io::Result<PathBuf> {
     for attempt in 0..16u8 {
@@ -924,6 +946,14 @@ pub(crate) fn default_matches(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn launched_tools_keep_loopback_off_the_proxy() {
+        assert_eq!(loopback_no_proxy_from(None), "127.0.0.1,localhost,::1");
+        assert_eq!(
+            loopback_no_proxy_from(Some(" corp.test, LOCALHOST ".into())),
+            "corp.test,LOCALHOST,127.0.0.1,::1"
+        );
+    }
     use super::*;
 
     #[cfg(unix)]
