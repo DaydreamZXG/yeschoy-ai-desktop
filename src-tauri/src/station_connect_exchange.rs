@@ -4,6 +4,7 @@
 //! `account_v2` / `oauth_pkce`. Third-party HTTPS origins are exchanged when
 //! they pass `connect_origin_is_acceptable`.
 
+use crate::net_route::{SendWithFallback, StationRoute};
 use std::time::Duration;
 
 use reqwest::{
@@ -277,7 +278,7 @@ async fn post_json(url: &str, body: Value) -> Result<JsonResponse, TransportFail
         .header(ACCEPT, "application/json")
         .header(CONTENT_TYPE, "application/json")
         .body(body.to_string())
-        .send()
+        .send_with_fallback()
         .await
         .map_err(map_reqwest_error)?;
     read_body(response).await
@@ -301,12 +302,13 @@ fn build_exchange_client(https_only: bool) -> Result<Client, TransportFailure> {
     let mut builder = Client::builder()
         .redirect(Policy::none())
         .referer(false)
-        .no_proxy()
         .timeout(REQUEST_TIMEOUT)
-        .connect_timeout(Duration::from_secs(6))
+        .station_route(Duration::from_secs(6))
         .user_agent(concat!("YesChoyDesktop/", env!("CARGO_PKG_VERSION")));
     if https_only {
         builder = builder.https_only(true);
+    } else {
+        builder = builder.no_proxy();
     }
     builder.build().map_err(|_| TransportFailure::Network)
 }

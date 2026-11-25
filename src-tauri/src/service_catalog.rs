@@ -1,3 +1,4 @@
+use crate::net_route::{SendWithFallback, StationRoute};
 use std::{
     sync::OnceLock,
     time::{Duration, SystemTime, UNIX_EPOCH},
@@ -55,9 +56,8 @@ fn build_client() -> Result<Client, CatalogError> {
         .https_only(true)
         .redirect(Policy::none())
         .referer(false)
-        .no_proxy()
         .timeout(REQUEST_TIMEOUT)
-        .connect_timeout(Duration::from_secs(5))
+        .station_route(Duration::from_secs(5))
         .user_agent(concat!("YesChoyDesktop/", env!("CARGO_PKG_VERSION")))
         .build()
         .map_err(|_| CatalogError::NetworkError)
@@ -75,7 +75,7 @@ async fn read_json(client: &Client, url: &str) -> Result<Option<Value>, CatalogE
     let mut response = client
         .get(url)
         .header(ACCEPT, "application/json")
-        .send()
+        .send_with_fallback()
         .await
         .map_err(network_error)?;
     if response.status() == StatusCode::NOT_FOUND {

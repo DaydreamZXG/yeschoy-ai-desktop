@@ -1,3 +1,4 @@
+use crate::net_route::SendWithFallback;
 use std::{
     collections::HashMap,
     path::PathBuf,
@@ -737,7 +738,7 @@ async fn probe_once(
             .post(url)
             .bearer_auth(key)
             .json(&probe_body(model, responses))
-            .send(),
+            .send_with_fallback(),
     )
     .await;
     match sent {

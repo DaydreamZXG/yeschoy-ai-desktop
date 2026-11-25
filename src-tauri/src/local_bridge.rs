@@ -13,6 +13,7 @@
 //! 把自己的 `dispatch` 挂上去。用函数指针而不是泛型，是为了让这个类型
 //! 保持可以直接存进 adapter 结构体里，不必带类型参数传染上去。
 
+use crate::net_route::StationRoute;
 use std::{sync::Arc, time::Duration};
 
 use axum::{http::header, Router};
@@ -40,7 +41,7 @@ pub(crate) fn upstream_client() -> Result<reqwest::Client, reqwest::Error> {
     reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::none())
         .retry(reqwest::retry::never())
-        .connect_timeout(Duration::from_secs(15))
+        .station_route(Duration::from_secs(10))
         .read_timeout(Duration::from_secs(600))
         .build()
 }

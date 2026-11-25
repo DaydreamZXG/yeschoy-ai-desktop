@@ -8,6 +8,7 @@
 //! 翻译本身用的是 `crate::proxy` 里来自 CC Switch 的协议转换（见
 //! `src/proxy/VENDOR.md`）；这个文件只负责收发和把错误说成 Claude 听得懂的样子。
 
+use crate::net_route::SendWithFallback;
 use axum::{
     body::Body,
     http::{header, StatusCode},
@@ -126,7 +127,7 @@ pub(super) async fn forward(
     let upstream = match request
         .bearer_auth(credential.upstream_key())
         .json(&chat)
-        .send()
+        .send_with_fallback()
         .await
     {
         Ok(response) => response,
