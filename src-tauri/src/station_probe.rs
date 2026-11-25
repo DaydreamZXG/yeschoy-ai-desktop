@@ -48,7 +48,7 @@ fn client() -> Result<Client, ()> {
         .https_only(true)
         .redirect(Policy::none())
         .timeout(TIMEOUT)
-        .station_route(Duration::from_secs(4))
+        .station_route(Duration::from_secs(2))
         .user_agent(concat!("YesChoy-Desktop/", env!("CARGO_PKG_VERSION")))
         .build()
         .map_err(|_| ())
