@@ -1109,8 +1109,9 @@ pub(crate) fn configuration_matches(record: &Record) -> bool {
 }
 
 fn still_ours(path: &Path, ours: &[u8], now: &[u8]) -> bool {
-    use crate::tool_adapters::{cline, hermes, openclaw};
-    cline::still_ours(path, ours, now)
+    use crate::tool_adapters::{claude_desktop, cline, hermes, openclaw};
+    claude_desktop::still_ours(path, ours, now)
+        .or_else(|| cline::still_ours(path, ours, now))
         .or_else(|| hermes::still_ours(path, ours, now))
         .or_else(|| openclaw::still_ours(ours, now))
         .unwrap_or(false)

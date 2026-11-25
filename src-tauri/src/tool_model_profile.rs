@@ -94,23 +94,12 @@ pub(crate) fn claude_code_behaves_as(id: &str) -> &str {
 /// visible label and resolve this deterministic, opaque local alias in the
 /// loopback bridge before forwarding upstream.
 pub(crate) fn claude_gateway_route_id(model_id: &str) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(b"yeschoy:claude-desktop-route:v1\0");
-    hasher.update(model_id.as_bytes());
-    let digest = hasher.finalize();
-    if let Some(family) = claude_capability_family(model_id) {
+    match claude_capability_family(model_id) {
         // Claude Desktop removes a trailing numeric `-v...` suffix before its
         // capability lookup. A decimal SHA-256 suffix keeps routes distinct
         // without leaking the real upstream model ID, while the normalized
         // family unlocks the app's native effort control.
-        let mut route = String::with_capacity(family.len() + 2 + digest.len() * 3);
-        route.push_str(family);
-        route.push_str("-v");
-        for byte in digest {
-            write!(&mut route, "{byte:03}").expect("writing to a String cannot fail");
-        }
-        route
-    } else {
+        Some(family) => decimal_route(family, model_id),
         // Do not invent capabilities for an unknown account model. It remains
         // usable through an opaque safe route, without a misleading selector.
         //
@@ -124,15 +113,22 @@ pub(crate) fn claude_gateway_route_id(model_id: &str) -> String {
         // third-party family pattern, and `abab` is in that pattern while
         // being four valid hex digits -- a hex digest would fail roughly one
         // model in a thousand, at random.
-        let mut route =
-            String::with_capacity(CLAUDE_SAFE_OPAQUE_FAMILY.len() + 2 + digest.len() * 3);
-        route.push_str(CLAUDE_SAFE_OPAQUE_FAMILY);
-        route.push_str("-v");
-        for byte in digest {
-            write!(&mut route, "{byte:03}").expect("writing to a String cannot fail");
-        }
-        route
+        None => decimal_route(CLAUDE_SAFE_OPAQUE_FAMILY, model_id),
     }
+}
+
+fn decimal_route(stem: &str, model_id: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(b"yeschoy:claude-desktop-route:v1\0");
+    hasher.update(model_id.as_bytes());
+    let digest = hasher.finalize();
+    let mut route = String::with_capacity(stem.len() + 2 + digest.len() * 3);
+    route.push_str(stem);
+    route.push_str("-v");
+    for byte in digest {
+        write!(&mut route, "{byte:03}").expect("writing to a String cannot fail");
+    }
+    route
 }
 
 /// The role-prefixed stem of the opaque route. Borrowed purely to satisfy the
@@ -200,6 +196,8 @@ pub(crate) fn claude_gateway_route_matches(model_id: &str, requested: &str) -> b
     // upstream ID; normalize only for an exact, already-enrolled route lookup.
     let (requested, _) = split_one_m_context_marker(requested);
     claude_gateway_route_id(model_id) == requested
+        // 型号后来认出了能力族（比如目录查找不再分大小写），旧档案里还是通用路由。
+        || decimal_route(CLAUDE_SAFE_OPAQUE_FAMILY, model_id) == requested
         || legacy_claude_gateway_route_id(model_id) == requested
 }
 
@@ -287,22 +285,24 @@ pub(crate) fn profile_catalog_verified_at() -> String {
         .unwrap_or_else(|_| bundled().verified_at.clone())
 }
 
+/// 站点后台填的型号名大小写随人（`DeepSeek-V4.1-Flash-1017`），目录里一律小写：
+/// 精确命中优先，否则不分大小写再找一次。Claude 自家的型号名照官方写法精确匹配，不猜。
 pub(crate) fn profile(id: &str) -> Option<&'static ModelProfile> {
     // Copy the &'static out before releasing the guard so the search itself
     // holds no lock.
     let catalog: &'static Catalog = *active().read().ok()?;
-    catalog.models.iter().find(|p| p.id == id)
-}
-
-/// 站点后台填的型号名大小写随人（`DeepSeek-V4.1-Flash-1017`），目录里一律小写。
-/// 只给「写给应用看的型号目录」用；按名字分族、判 1M 的地方仍然精确匹配。
-pub(crate) fn profile_any_case(id: &str) -> Option<&'static ModelProfile> {
-    profile(id).or_else(|| {
-        let catalog: &'static Catalog = *active().read().ok()?;
-        catalog
-            .models
-            .iter()
-            .find(|p| p.id.eq_ignore_ascii_case(id))
+    let native = id
+        .get(..7)
+        .is_some_and(|head| head.eq_ignore_ascii_case("claude-"));
+    catalog.models.iter().find(|p| p.id == id).or_else(|| {
+        (!native)
+            .then(|| {
+                catalog
+                    .models
+                    .iter()
+                    .find(|p| p.id.eq_ignore_ascii_case(id))
+            })
+            .flatten()
     })
 }
 
@@ -642,6 +642,24 @@ pub(crate) fn native_chat_catalog(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn site_model_names_in_any_case_get_the_catalog_capabilities() {
+        let upper = "DeepSeek-V4.1-Flash-1017";
+        assert!(profile(upper).is_some());
+        assert_eq!(claude_capability_family(upper), Some("claude-sonnet-4-6"));
+        assert_eq!(
+            display_name(upper),
+            display_name("deepseek-v4.1-flash-1017")
+        );
+        assert!(claude_gateway_route_id(upper).starts_with("claude-sonnet-4-6-v"));
+        let old_opaque = decimal_route(CLAUDE_SAFE_OPAQUE_FAMILY, upper);
+        assert!(claude_gateway_route_matches(upper, &old_opaque));
+        assert!(!claude_gateway_route_matches(
+            "deepseek-v4.1-flash-1017",
+            &old_opaque
+        ));
+    }
 
     #[test]
     fn a_budget_too_small_for_a_tool_call_is_lifted_to_the_floor() {

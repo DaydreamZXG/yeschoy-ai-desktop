@@ -298,12 +298,13 @@ fn catalog_value(model: &str, transport: CodexTransport) -> Result<Value, Adapte
     object.insert("slug".into(), serde_json::json!(model));
     object.insert(
         "display_name".into(),
-        serde_json::json!(crate::tool_model_profile::profile_any_case(model)
-            .map_or(model, |p| p.display_name.as_str())),
+        serde_json::json!(
+            crate::tool_model_profile::profile(model).map_or(model, |p| p.display_name.as_str())
+        ),
     );
     object.insert("description".into(), serde_json::json!(model));
     object.insert("priority".into(), serde_json::json!(0));
-    let profile = crate::tool_model_profile::profile_any_case(model);
+    let profile = crate::tool_model_profile::profile(model);
     let levels: Vec<_> = profile
         .into_iter()
         .flat_map(|p| &p.reasoning_levels)
