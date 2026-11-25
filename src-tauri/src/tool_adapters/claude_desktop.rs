@@ -136,6 +136,48 @@ fn meta_config(existing: Option<&[u8]>) -> Result<Vec<u8>, ()> {
     pretty(&value)
 }
 
+/// 接好以后 Claude 桌面版自己也会写这几个文件：往 `claude_desktop_config.json` 里记偏好、
+/// 换键的顺序，启动时我们也会刷新档案里的型号行。只看我们管的那几项，别当成被别的工具改了。
+pub(crate) fn still_ours(path: &Path, ours: &[u8], now: &[u8]) -> Option<bool> {
+    let name = path.file_name()?.to_str()?;
+    let in_library = path
+        .parent()
+        .and_then(Path::file_name)
+        .is_some_and(|dir| dir == "configLibrary");
+    let ours: Value = serde_json::from_slice(ours).ok()?;
+    let Ok(now) = serde_json::from_slice::<Value>(now) else {
+        return Some(false);
+    };
+    if name == "claude_desktop_config.json" {
+        return Some(
+            ours["deploymentMode"].is_string() && now["deploymentMode"] == ours["deploymentMode"],
+        );
+    }
+    if in_library && name == "_meta.json" {
+        return Some(now["appliedId"] == ours["appliedId"]);
+    }
+    if in_library && ours["inferenceGatewayBaseUrl"].as_str() == Some(PROXY_BASE) {
+        return Some(
+            [
+                "inferenceGatewayBaseUrl",
+                "inferenceGatewayApiKey",
+                "inferenceProvider",
+            ]
+            .iter()
+            .all(|key| now[*key] == ours[*key])
+                && now["inferenceModels"].as_array().is_some_and(|models| {
+                    !models.is_empty()
+                        && models.iter().all(|model| {
+                            model["name"]
+                                .as_str()
+                                .is_some_and(crate::tool_model_profile::is_claude_gateway_route)
+                        })
+                }),
+        );
+    }
+    None
+}
+
 pub(crate) fn current_paths(
     home: &Path,
 ) -> Result<(PathBuf, PathBuf, PathBuf, PathBuf), AdapterFailure> {
@@ -985,6 +1027,45 @@ mod tests {
             "deepseek-v4-flash"
         );
         assert!(!String::from_utf8(bytes).unwrap().contains("sk-secret"));
+    }
+
+    #[test]
+    fn claude_desktops_own_rewrites_are_still_our_connection() {
+        let library = Path::new("/h/Claude-3p/configLibrary");
+        let config = Path::new("/h/Claude-3p/claude_desktop_config.json");
+        let ours = br#"{"coworkUserFilesPath":"/u","deploymentMode":"3p"}"#;
+        let rewritten =
+            br#"{"deploymentMode":"3p","coworkUserFilesPath":"/u","preferences":{"a":1}}"#;
+        assert_eq!(still_ours(config, ours, rewritten), Some(true));
+        assert_eq!(
+            still_ours(config, ours, br#"{"deploymentMode":"1p"}"#),
+            Some(false)
+        );
+
+        let token = format!("ycg-{}", "a".repeat(64));
+        let profile =
+            profile_catalog("deepseek-v4-flash", &token, &["deepseek-v4-flash".into()]).unwrap();
+        let path = library.join(format!("{PROFILE_ID}.json"));
+        let mut now: Value = serde_json::from_slice(&profile).unwrap();
+        now["inferenceModels"][0]["labelOverride"] = "renamed".into();
+        now["futureField"] = true.into();
+        assert_eq!(
+            still_ours(&path, &profile, &serde_json::to_vec(&now).unwrap()),
+            Some(true)
+        );
+        now["inferenceGatewayApiKey"] = "somebody-else".into();
+        assert_eq!(
+            still_ours(&path, &profile, &serde_json::to_vec(&now).unwrap()),
+            Some(false)
+        );
+
+        let meta = meta_config(None).unwrap();
+        let other = br#"{"appliedId":"other","entries":[]}"#;
+        assert_eq!(
+            still_ours(&library.join("_meta.json"), &meta, other),
+            Some(false)
+        );
+        assert_eq!(still_ours(Path::new("/h/other.json"), &meta, other), None);
     }
 
     #[test]

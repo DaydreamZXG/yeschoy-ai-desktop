@@ -1,6 +1,6 @@
 [package]
 name = "yeschoy-desktop"
-version = "0.5.3"
+version = "0.5.4"
 description = "YesChoy: connect your AI apps to any relay station, no command line"
 authors = ["YesChoy contributors"]
 license = "MIT"
@@ -52,6 +52,8 @@ sha2 = "0.10"
 thiserror = "2.0"
 tauri = { version = "2.8.2", default-features = false, features = ["wry", "tray-icon"] }
 tauri-plugin-updater = { version = "=2.9.0", default-features = false, features = ["native-tls", "zip"] }
+# 应用更新用的 reqwest 0.12：打开 socks，系统代理是 SOCKS5 时也能查更新、下载更新。
+reqwest_updater = { package = "reqwest", version = "=0.12.28", default-features = false, features = ["socks"] }
 tokio = { version = "1", features = ["io-util", "macros", "net", "process", "rt-multi-thread", "sync", "time"] }
 tower = { version = "0.5", default-features = false }
 toml_edit = { version = "0.24", features = ["serde"] }

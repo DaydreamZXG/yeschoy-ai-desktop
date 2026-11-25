@@ -98,18 +98,42 @@ async fn send(request: RequestBuilder) -> reqwest::Result<Response> {
     }
 }
 
-fn pick(url: &Url) -> Option<Url> {
+/// 只能给整个请求指定一条线路的场合（应用更新）：要试的线路，先试当前该走的那条。`None` 是直连。
+pub(crate) fn routes_for(url: &Url) -> Vec<Option<Url>> {
+    let Some(host) = remote_host(url) else {
+        return vec![None];
+    };
+    let Some(proxy) = system_proxy(url) else {
+        return vec![None];
+    };
+    if switched(&host) {
+        vec![None, Some(proxy)]
+    } else {
+        vec![Some(proxy), None]
+    }
+}
+
+/// 记下 [`routes_for`] 给的某条线路连不上，之后几分钟先试另一条。
+pub(crate) fn route_failed(url: &Url, via_proxy: bool) {
+    if let Some(host) = remote_host(url) {
+        Picked { host, via_proxy }.failed();
+    }
+}
+
+fn remote_host(url: &Url) -> Option<String> {
     let host = url
         .host_str()?
         .trim_matches(['[', ']'])
         .to_ascii_lowercase();
-    if host == "localhost"
+    let loopback = host == "localhost"
         || host
             .parse::<std::net::IpAddr>()
-            .is_ok_and(|ip| ip.is_loopback())
-    {
-        return None;
-    }
+            .is_ok_and(|ip| ip.is_loopback());
+    (!loopback).then_some(host)
+}
+
+fn pick(url: &Url) -> Option<Url> {
+    let host = remote_host(url)?;
     let proxy = system_proxy(url)?;
     let via_proxy = !switched(&host);
     PICKED.with(|picked| picked.set(Some(Picked { host, via_proxy })));
@@ -411,6 +435,25 @@ mod tests {
             matcher: Arc::new(Matcher::builder().http(proxy).https(proxy).build()),
         });
         SWITCHED.lock().unwrap().clear();
+    }
+
+    #[tokio::test]
+    async fn update_routes_follow_the_system_proxy_and_flip_after_a_failure() {
+        let _serial = SERIAL.lock().await;
+        use_proxy("http://127.0.0.1:7890");
+        let url: Url = "https://github.com/o/r/releases/latest/download/latest.json"
+            .parse()
+            .unwrap();
+        let proxy: Url = "http://127.0.0.1:7890".parse().unwrap();
+        assert_eq!(routes_for(&url), vec![Some(proxy.clone()), None]);
+        route_failed(&url, true);
+        assert_eq!(routes_for(&url), vec![None, Some(proxy.clone())]);
+        route_failed(&url, false);
+        assert_eq!(routes_for(&url), vec![Some(proxy), None]);
+        assert_eq!(
+            routes_for(&"http://127.0.0.1:1/x".parse().unwrap()),
+            vec![None]
+        );
     }
 
     async fn closed_port() -> u16 {

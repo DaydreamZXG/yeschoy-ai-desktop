@@ -15,9 +15,67 @@ use crate::{drain_desktop_runtimes, shutdown_coordinator::global as shutdown};
 
 const UPDATE_PROGRESS_EVENT: &str = "yeschoy://update-progress";
 const CHECK_TIMEOUT: Duration = Duration::from_secs(12);
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(4);
 const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(30 * 60);
 const PROGRESS_INTERVAL: Duration = Duration::from_millis(250);
 const RECOVERY_MARKER: &str = "update-install-recovery-v1";
+
+/// 查更新、下载更新这次走哪条线路；`None` 是直连。两件事都排在 `gate` 后面，不会同时改它。
+static ROUTE: Mutex<Option<reqwest::Url>> = Mutex::new(None);
+
+fn set_route(route: Option<reqwest::Url>) {
+    *ROUTE.lock().unwrap_or_else(|e| e.into_inner()) = route;
+}
+
+fn current_route() -> Option<reqwest::Url> {
+    ROUTE.lock().unwrap_or_else(|e| e.into_inner()).clone()
+}
+
+fn routed_client(builder: reqwest_updater::ClientBuilder) -> reqwest_updater::ClientBuilder {
+    let builder = builder.connect_timeout(CONNECT_TIMEOUT);
+    match current_route().map(|proxy| reqwest_updater::Proxy::all(proxy.as_str())) {
+        Some(Ok(proxy)) => builder.proxy(proxy),
+        Some(Err(_)) | None => builder.no_proxy(),
+    }
+}
+
+fn network_error(error: &UpdaterError) -> bool {
+    matches!(
+        error,
+        UpdaterError::Reqwest(_) | UpdaterError::Network(_) | UpdaterError::ReleaseNotFound
+    )
+}
+
+/// 跟着系统代理查更新；当前线路连不上就换另一条再查一次。
+async fn check_on_routes(
+    app: &tauri::AppHandle,
+    endpoint: &str,
+    public_key: &str,
+) -> Result<Option<Update>, UpdaterError> {
+    let endpoint: reqwest::Url = endpoint.parse()?;
+    let routes = crate::net_route::routes_for(&endpoint);
+    let last = routes.len() - 1;
+    for (index, route) in routes.into_iter().enumerate() {
+        let via_proxy = route.is_some();
+        set_route(route);
+        let checked = app
+            .updater_builder()
+            .timeout(CHECK_TIMEOUT)
+            .pubkey(public_key)
+            .configure_client(routed_client)
+            .endpoints(vec![endpoint.clone()])?
+            .build()?
+            .check()
+            .await;
+        match checked {
+            Err(error) if index < last && network_error(&error) => {
+                crate::net_route::route_failed(&endpoint, via_proxy);
+            }
+            other => return other,
+        }
+    }
+    unreachable!("routes_for always returns at least one route")
+}
 
 #[derive(Default)]
 pub(crate) struct AppUpdateState {
@@ -195,28 +253,9 @@ async fn check_update(
             );
         }
     };
-    let updater = match channel
-        .endpoint
-        .parse()
-        .map_err(UpdaterError::from)
-        .and_then(|endpoint| {
-            app.updater_builder()
-                .timeout(CHECK_TIMEOUT)
-                .pubkey(channel.public_key.clone())
-                .endpoints(vec![endpoint])?
-                .build()
-        }) {
-        Ok(updater) => updater,
-        Err(error) => {
-            *state.available() = None;
-            drop(gate);
-            let response = unavailable_response(request_id, &current_version, &error);
-            emit_progress(app, &response);
-            return response;
-        }
-    };
-
-    let checked = permit.cancel_safe(updater.check()).await;
+    let checked = permit
+        .cancel_safe(check_on_routes(app, &channel.endpoint, &channel.public_key))
+        .await;
     let response = match checked {
         Err(_) => AppUpdateResponse::new(
             request_id,
@@ -334,30 +373,45 @@ async fn install_update(
     .with_notes(update.body.as_deref().unwrap_or_default());
     emit_progress(app, &initial);
 
-    let download = update.download(
-        move |chunk, announced_total| {
-            let observed =
-                callback_downloaded.fetch_add(chunk as u64, Ordering::Relaxed) + chunk as u64;
-            let announced = announced_total.unwrap_or(0);
-            callback_total.store(announced, Ordering::Relaxed);
-            if last_emitted.elapsed() >= PROGRESS_INTERVAL {
-                last_emitted = Instant::now();
-                emit_progress(
-                    &callback_app,
-                    &AppUpdateResponse::new(
-                        &callback_request_id,
-                        UpdatePhase::Downloading,
-                        &callback_current,
-                        "downloading",
-                    )
-                    .with_available_version(&callback_version)
-                    .with_progress(observed, announced),
-                );
+    let mut on_chunk = move |chunk: usize, announced_total: Option<u64>| {
+        let observed =
+            callback_downloaded.fetch_add(chunk as u64, Ordering::Relaxed) + chunk as u64;
+        let announced = announced_total.unwrap_or(0);
+        callback_total.store(announced, Ordering::Relaxed);
+        if last_emitted.elapsed() >= PROGRESS_INTERVAL {
+            last_emitted = Instant::now();
+            emit_progress(
+                &callback_app,
+                &AppUpdateResponse::new(
+                    &callback_request_id,
+                    UpdatePhase::Downloading,
+                    &callback_current,
+                    "downloading",
+                )
+                .with_available_version(&callback_version)
+                .with_progress(observed, announced),
+            );
+        }
+    };
+    let routes = crate::net_route::routes_for(&update.download_url);
+    set_route(routes.first().cloned().flatten());
+    let mut downloaded_bytes = permit
+        .cancel_safe(update.download(&mut on_chunk, || {}))
+        .await;
+    if let Ok(Err(error)) = &downloaded_bytes {
+        let current = current_route();
+        if network_error(error) {
+            if let Some(other) = routes.into_iter().find(|route| *route != current) {
+                crate::net_route::route_failed(&update.download_url, current.is_some());
+                set_route(other);
+                downloaded.store(0, Ordering::Relaxed);
+                downloaded_bytes = permit
+                    .cancel_safe(update.download(&mut on_chunk, || {}))
+                    .await;
             }
-        },
-        || {},
-    );
-    let bytes = match permit.cancel_safe(download).await {
+        }
+    }
+    let bytes = match downloaded_bytes {
         Err(_) => {
             return AppUpdateResponse::new(
                 request_id,
