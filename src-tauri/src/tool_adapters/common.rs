@@ -828,6 +828,9 @@ fn loopback_no_proxy_from(existing: Option<String>) -> String {
         .filter(|host| !host.is_empty())
         .map(str::to_owned)
         .collect();
+    if hosts.iter().any(|host| host == "*") {
+        return "*".to_owned();
+    }
     for loopback in ["127.0.0.1", "localhost", "::1"] {
         if !hosts.iter().any(|host| host.eq_ignore_ascii_case(loopback)) {
             hosts.push(loopback.to_owned());
@@ -953,6 +956,7 @@ mod tests {
             loopback_no_proxy_from(Some(" corp.test, LOCALHOST ".into())),
             "corp.test,LOCALHOST,127.0.0.1,::1"
         );
+        assert_eq!(loopback_no_proxy_from(Some("*".into())), "*");
     }
     use super::*;
 
