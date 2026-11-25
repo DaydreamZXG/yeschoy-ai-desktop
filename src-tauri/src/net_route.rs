@@ -203,9 +203,15 @@ fn windows_matcher() -> Option<Matcher> {
         return None;
     }
     let (http, https) = split_proxy_server(&settings.get_value::<String, _>("ProxyServer").ok()?)?;
-    let no = settings
-        .get_value::<String, _>("ProxyOverride")
-        .map(|value| no_proxy_list(&value))
+    let no = ["NO_PROXY", "no_proxy"]
+        .iter()
+        .find_map(|key| std::env::var(key).ok().filter(|value| !value.is_empty()))
+        .or_else(|| {
+            settings
+                .get_value::<String, _>("ProxyOverride")
+                .ok()
+                .map(|value| no_proxy_list(&value))
+        })
         .unwrap_or_default();
     Some(Matcher::builder().http(http).https(https).no(no).build())
 }
