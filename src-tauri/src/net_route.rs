@@ -255,6 +255,11 @@ fn mac_socks_matcher() -> Option<Matcher> {
                 .join(",")
         })
         .unwrap_or_default();
+    let host = if host.contains(':') && !host.starts_with('[') {
+        format!("[{host}]")
+    } else {
+        host
+    };
     let socks = format!("socks5h://{host}:{port}");
     Some(
         Matcher::builder()
