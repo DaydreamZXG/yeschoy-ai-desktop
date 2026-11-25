@@ -330,7 +330,8 @@ jobs:
   candidate:
     name: Assemble and verify the 12-file candidate
     needs: [windows, macos]
-    runs-on: macos-15
+    # 只做 codesign/stapler 校验，不打包；Apple Silicon 机器常排不上队，用 Intel 的。
+    runs-on: macos-15-intel
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
