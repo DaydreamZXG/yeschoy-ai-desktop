@@ -345,10 +345,13 @@ impl Prepared {
                                         && (!strict_default
                                             || label == crate::tool_model_profile::display_name(id))
                                 }) && model["description"].as_str() == Some(id)
-                                    && model["behavesAs"].as_str()
-                                        == Some(crate::tool_model_profile::claude_code_behaves_as(
-                                            id,
-                                        ))
+                                    && model["behavesAs"].as_str().is_some_and(|family| {
+                                        family
+                                            == crate::tool_model_profile::claude_code_behaves_as(id)
+                                            // 0.5.4 以前目录查找分大小写，大写型号写的是默认族。
+                                            || (family == crate::tool_model_profile::CLAUDE_BEHAVES_AS
+                                                && id.bytes().any(|b| b.is_ascii_uppercase()))
+                                    })
                             })
                         })
                     })
