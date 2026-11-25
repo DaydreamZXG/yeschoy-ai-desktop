@@ -13,7 +13,12 @@ use super::AdapterFailure;
 pub(crate) fn launch(app_id: &str, path: &Path) -> Result<(), AdapterFailure> {
     let target = crate::desktop_app_discovery::resolve_launch_target(app_id, path)
         .ok_or_else(|| launch_error("resolve", "desktop_launch_target_changed", None))?;
-    dispatch(&target, &mut NativeLauncher)
+    dispatch(
+        &target,
+        &mut NativeLauncher {
+            loopback_no_proxy: app_id == "codex_desktop",
+        },
+    )
 }
 
 trait Launcher {
@@ -48,7 +53,10 @@ fn io_error(stage: &'static str, reason: &'static str, error: std::io::Error) ->
     launch_error(stage, reason, error.raw_os_error())
 }
 
-struct NativeLauncher;
+/// 只给 Codex 带回环例外，理由见 `terminal_launch::MAC_LOOPBACK_NO_PROXY`。
+struct NativeLauncher {
+    loopback_no_proxy: bool,
+}
 
 impl Launcher for NativeLauncher {
     fn open_bundle(&mut self, path: &Path) -> Result<(), AdapterFailure> {
@@ -68,10 +76,14 @@ impl Launcher for NativeLauncher {
     fn spawn_executable(&mut self, path: &Path) -> Result<(), AdapterFailure> {
         #[cfg(target_os = "windows")]
         {
-            let no_proxy = super::common::loopback_no_proxy();
-            Command::new(path)
-                .env("NO_PROXY", &no_proxy)
-                .env("no_proxy", &no_proxy)
+            let mut command = Command::new(path);
+            if self.loopback_no_proxy {
+                let no_proxy = super::common::loopback_no_proxy();
+                command
+                    .env("NO_PROXY", &no_proxy)
+                    .env("no_proxy", &no_proxy);
+            }
+            command
                 .stdin(Stdio::null())
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())
@@ -81,7 +93,7 @@ impl Launcher for NativeLauncher {
         }
         #[cfg(not(target_os = "windows"))]
         {
-            let _ = path;
+            let _ = (path, self.loopback_no_proxy);
             Err(AdapterFailure::UnsupportedProfile)
         }
     }

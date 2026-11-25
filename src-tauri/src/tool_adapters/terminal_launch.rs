@@ -24,6 +24,7 @@ struct LaunchPlan {
     new_console: bool,
     working_directory: String,
     mac_command: Option<String>,
+    loopback_no_proxy: bool,
 }
 
 fn failure(reason: &'static str) -> AdapterFailure {
@@ -105,6 +106,8 @@ fn with_arguments(program: String, arguments: &[&str]) -> String {
 }
 
 /// 终端里起的命令行工具不继承 YesChoy 的环境，回环例外要在脚本里自己加。
+/// 只给 Codex：它照搬系统代理却不认例外列表；Python 工具（Hermes）见到任何
+/// `*_proxy` 环境变量就不再读系统代理，加了反而让它绕开代理。
 const MAC_LOOPBACK_NO_PROXY: &str = "yc_no_proxy=\"${NO_PROXY:-${no_proxy:-}}\"\n[ \"$yc_no_proxy\" = '*' ] || yc_no_proxy=\"${yc_no_proxy:+$yc_no_proxy,}127.0.0.1,localhost,::1\"\nNO_PROXY=\"$yc_no_proxy\"\nno_proxy=\"$yc_no_proxy\"\nexport NO_PROXY no_proxy\n";
 
 fn mac_shell_command(
@@ -112,6 +115,7 @@ fn mac_shell_command(
     workspace: &str,
     runtime_directories: &[String],
     attempts: &[&[&str]],
+    loopback_no_proxy: bool,
 ) -> String {
     let prefix = runtime_directories
         .iter()
@@ -134,8 +138,13 @@ fn mac_shell_command(
         .collect::<Vec<_>>()
         .join(" || ");
     format!(
-        "cd -- {} || exit 1\nunset ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY\nPATH={path}\nexport PATH\n{MAC_LOOPBACK_NO_PROXY}{invocation}",
+        "cd -- {} || exit 1\nunset ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY\nPATH={path}\nexport PATH\n{}{invocation}",
         quoted_shell(workspace),
+        if loopback_no_proxy {
+            MAC_LOOPBACK_NO_PROXY
+        } else {
+            ""
+        },
     )
 }
 
@@ -240,6 +249,7 @@ fn build_plan(
     let executable = path_text(&installation.path, platform)?;
     let workspace = path_text(workspace, platform)?;
     let attempts = launch_attempts(tool_id);
+    let loopback_no_proxy = tool_id == "codex_cli";
     match platform {
         Platform::MacOs => {
             let runtime_directories = common::cli_runtime_directories(&installation.path)
@@ -257,8 +267,10 @@ fn build_plan(
                     &workspace,
                     &runtime_directories,
                     attempts,
+                    loopback_no_proxy,
                 )),
                 working_directory: workspace,
+                loopback_no_proxy: false,
             })
         }
         Platform::Windows => {
@@ -327,6 +339,7 @@ fn build_plan(
                 new_console: true,
                 working_directory: workspace,
                 mac_command: None,
+                loopback_no_proxy,
             })
         }
     }
@@ -431,13 +444,16 @@ fn launch_with(
 }
 
 fn execute(plan: &LaunchPlan) -> Result<(), AdapterFailure> {
-    let no_proxy = common::loopback_no_proxy();
     let mut command = Command::new(&plan.program);
     command
         .args(&plan.args)
-        .current_dir(&plan.working_directory)
-        .env("NO_PROXY", &no_proxy)
-        .env("no_proxy", &no_proxy);
+        .current_dir(&plan.working_directory);
+    if plan.loopback_no_proxy {
+        let no_proxy = common::loopback_no_proxy();
+        command
+            .env("NO_PROXY", &no_proxy)
+            .env("no_proxy", &no_proxy);
+    }
     if !plan.new_console {
         command
             .stdin(std::process::Stdio::null())
@@ -547,6 +563,33 @@ mod tests {
     }
 
     #[test]
+    fn only_codex_gets_the_loopback_proxy_bypass() {
+        let plan = |platform, path: &str, tool| {
+            build_plan(
+                platform,
+                &ResolvedInstallation { path: path.into() },
+                tool,
+                Path::new(if platform == Platform::Windows {
+                    r"C:\native"
+                } else {
+                    "/native"
+                }),
+                Some(Path::new(r"C:\Windows")),
+            )
+            .unwrap()
+        };
+        assert!(plan(Platform::Windows, r"C:\native\codex.exe", "codex_cli").loopback_no_proxy);
+        assert!(!plan(Platform::Windows, r"C:\native\hermes.exe", "hermes").loopback_no_proxy);
+        let mac = |tool| {
+            plan(Platform::MacOs, "/native/bin/tool", tool)
+                .mac_command
+                .unwrap()
+        };
+        assert!(mac("codex_cli").contains("export NO_PROXY no_proxy"));
+        assert!(!mac("hermes").contains("NO_PROXY"));
+    }
+
+    #[test]
     fn activation_and_open_button_share_terminal_handoff() {
         let activation = include_str!("../tool_activation.rs");
         let opener = activation
@@ -584,6 +627,7 @@ mod tests {
                     "/native/我的项目",
                     &[],
                     &[&[]],
+                    false,
                 )
                 .as_str()
             )
@@ -713,6 +757,7 @@ mod tests {
             directory.to_str().unwrap(),
             &[],
             launch_attempts("openclaw"),
+            false,
         );
         let calls = directory.join("openclaw.calls");
         let run = || {
