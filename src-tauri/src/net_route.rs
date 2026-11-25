@@ -267,6 +267,18 @@ mod tests {
     }
 
     #[test]
+    fn a_socks_proxy_is_handed_to_reqwest_as_socks() {
+        let _serial = SERIAL.blocking_lock();
+        use_proxy("socks5://127.0.0.1:7891");
+        let proxy = pick(&Url::parse("https://station.test/").unwrap()).unwrap();
+        assert_eq!(proxy.scheme(), "socks5");
+        reqwest::Client::builder()
+            .station_route(Duration::from_secs(2))
+            .build()
+            .unwrap();
+    }
+
+    #[test]
     fn loopback_never_goes_through_the_proxy() {
         let _serial = SERIAL.blocking_lock();
         use_proxy("http://192.0.2.1:7890");
