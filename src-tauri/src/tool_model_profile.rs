@@ -288,14 +288,23 @@ pub(crate) fn profile_catalog_verified_at() -> String {
 /// 站点后台填的型号名大小写随人（`DeepSeek-V4.1-Flash-1017`），目录里一律小写：
 /// 精确命中优先，否则不分大小写再找一次。Claude 自家的型号名照官方写法精确匹配，不猜。
 pub(crate) fn profile(id: &str) -> Option<&'static ModelProfile> {
-    // Copy the &'static out before releasing the guard so the search itself
-    // holds no lock.
-    let catalog: &'static Catalog = *active().read().ok()?;
     let native = id
         .get(..7)
         .is_some_and(|head| head.eq_ignore_ascii_case("claude-"));
+    find_profile(id, !native)
+}
+
+/// 写给 Codex 的型号目录只拿来显示档位和上下文，Claude 自家型号也不分大小写。
+pub(crate) fn profile_any_case(id: &str) -> Option<&'static ModelProfile> {
+    find_profile(id, true)
+}
+
+fn find_profile(id: &str, any_case: bool) -> Option<&'static ModelProfile> {
+    // Copy the &'static out before releasing the guard so the search itself
+    // holds no lock.
+    let catalog: &'static Catalog = *active().read().ok()?;
     catalog.models.iter().find(|p| p.id == id).or_else(|| {
-        (!native)
+        any_case
             .then(|| {
                 catalog
                     .models
