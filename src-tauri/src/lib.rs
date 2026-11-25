@@ -35,6 +35,7 @@ mod logging;
 mod manual_locations;
 mod model_catalog;
 mod native_shell;
+mod net_route;
 mod open_connection;
 mod openclaw_bridge;
 mod opencode_bridge;

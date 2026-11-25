@@ -4,6 +4,7 @@
 //!
 //! 安全约束：只走 HTTPS、不跟随跳转、限制响应大小；令牌只用于这一次请求，
 //! 不落盘、不写日志、不回传给前端。
+use crate::net_route::{SendWithFallback, StationRoute};
 use std::time::Duration;
 
 use reqwest::{header, redirect::Policy, Client, StatusCode};
@@ -47,7 +48,7 @@ fn client() -> Result<Client, ()> {
         .https_only(true)
         .redirect(Policy::none())
         .timeout(TIMEOUT)
-        .connect_timeout(Duration::from_secs(2))
+        .station_route(Duration::from_secs(2))
         .user_agent(concat!("YesChoy-Desktop/", env!("CARGO_PKG_VERSION")))
         .build()
         .map_err(|_| ())
@@ -65,7 +66,7 @@ async fn get(client: &Client, url: &str, bearer: Option<&str>) -> Fetch {
     if let Some(token) = bearer {
         request = request.bearer_auth(token);
     }
-    let response = match request.send().await {
+    let response = match request.send_with_fallback().await {
         Ok(response) => response,
         Err(error) if error.is_timeout() => return Fetch::Timeout,
         Err(_) => return Fetch::Unreachable,

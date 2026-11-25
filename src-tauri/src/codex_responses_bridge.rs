@@ -10,6 +10,7 @@
 //! 上游都要重打一遍补丁。现在改成：上游文件逐字节原样，YesChoy 的行为写在这里，
 //! 调用它公开的入口。再同步就是 `cp`，见 `proxy/VENDOR.md`。
 
+use crate::net_route::SendWithFallback;
 use axum::{
     body::{to_bytes, Body},
     extract::State,
@@ -327,7 +328,7 @@ async fn responses(state: &BridgeState, request: Request<Body>) -> Response {
     )
     .bearer_auth(credential.upstream_key())
     .json(&converted.chat)
-    .send()
+    .send_with_fallback()
     .await;
     let Ok(upstream) = upstream else {
         return error(StatusCode::BAD_GATEWAY, "upstream request failed");
@@ -392,7 +393,7 @@ async fn forward_verbatim(
         },
     )
     .body(body)
-    .send()
+    .send_with_fallback()
     .await;
     let Ok(upstream) = upstream else {
         return error(StatusCode::BAD_GATEWAY, "upstream request failed");

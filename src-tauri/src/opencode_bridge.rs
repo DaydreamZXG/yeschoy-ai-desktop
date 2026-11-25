@@ -9,6 +9,7 @@
 //! - 中转站的 key 留在系统钥匙串里，由这座桥按模型取出来再转发。
 //!
 //! 协议是 OpenAI Chat Completions 原样透传，不做任何转换。
+use crate::net_route::SendWithFallback;
 use axum::{
     body::{to_bytes, Body},
     extract::State,
@@ -146,7 +147,7 @@ async fn chat(state: &BridgeState, request: Request<Body>) -> Response {
         .bearer_auth(credential.upstream_key())
         .header(header::CONTENT_TYPE, "application/json")
         .body(bytes)
-        .send()
+        .send_with_fallback()
         .await;
     let Ok(upstream) = upstream else {
         return error(StatusCode::BAD_GATEWAY, "upstream request failed");

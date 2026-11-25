@@ -2,6 +2,7 @@
 //!
 //! Runs parallel to deep-link connect; does not replace device-code on catalog lines.
 
+use crate::net_route::SendWithFallback;
 use std::{
     sync::Mutex,
     time::{Duration, Instant},
@@ -309,7 +310,7 @@ async fn post_oauth_token(
         .post(request.endpoint())
         .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
         .body(request.body().to_owned())
-        .send()
+        .send_with_fallback()
         .await
         .map_err(map_reqwest_to_reason)?;
     let status = response.status().as_u16();

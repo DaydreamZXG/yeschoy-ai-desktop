@@ -9,6 +9,7 @@
 //! 已下发的模型做精确归一化并补齐对应 Beta 头。若上游提供权威的上下文计数，
 //! 转发器可以缩减过大的输出预留，但不会截断或改写用户消息。
 
+use crate::net_route::SendWithFallback;
 use axum::{
     body::{to_bytes, Body},
     extract::State,
@@ -529,7 +530,7 @@ async fn send_upstream(
         outbound = outbound.header(name, mark);
     }
     crate::account_v2::app_token::attach(outbound, &url)
-        .send()
+        .send_with_fallback()
         .await
 }
 

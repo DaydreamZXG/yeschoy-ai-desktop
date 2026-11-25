@@ -4,6 +4,7 @@
 //! 做不到，也没有账户接口可问。所以这里只做 OpenAI 兼容接口能回答的两件事：
 //! 这把密钥看不看得到这些模型，以及 Claude 该直连还是过桥。
 use super::*;
+use crate::net_route::SendWithFallback;
 
 /// 没有账户，也就没有分组：所有模型共用这一把密钥。
 pub(super) fn lease(key: &str) -> TokenLease {
@@ -162,7 +163,7 @@ async fn probe_messages_once(
         } else {
             request.header("x-api-key", key)
         };
-    match tokio::time::timeout(PROBE_ATTEMPT_BUDGET, request.send()).await {
+    match tokio::time::timeout(PROBE_ATTEMPT_BUDGET, request.send_with_fallback()).await {
         Ok(Ok(response)) => probe_outcome_for(response.status()),
         _ => ProbeOutcome::Inconclusive,
     }

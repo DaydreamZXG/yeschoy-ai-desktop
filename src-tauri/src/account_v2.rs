@@ -1,3 +1,4 @@
+use crate::net_route::{SendWithFallback, StationRoute};
 use std::{
     collections::{BTreeMap, BTreeSet},
     process::Command,
@@ -24,9 +25,10 @@ const CLIENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const MAX_RESPONSE_BYTES: usize = 2 * 1024 * 1024;
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 /// 开机检查账户不能拖住界面：整条 inspect（bootstrap→刷新→账户）最多等这么久。
-/// 5 秒够慢网完成一次往返；再长就只是让首页干等。
-const INSPECT_DEADLINE: Duration = Duration::from_secs(5);
-const CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
+/// 要够一条线路卡满建连时限后换另一条线路再走完一次往返；再长就只是让首页干等。
+const INSPECT_DEADLINE: Duration = Duration::from_secs(8);
+/// 每条线路各自的建连时限（含 TLS）；走代理时握手要多绕一程。
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(3);
 const KEYRING_SERVICE: &str = "com.yeschoy.desktop.account";
 const KEYRING_USER: &str = "current-session-v2";
 const AUTHORIZATION_PATH: &str = "/api/desktop/v2/device-authorizations";
@@ -489,9 +491,8 @@ fn client() -> Result<&'static Client, ()> {
                 .https_only(true)
                 .redirect(Policy::none())
                 .referer(false)
-                .no_proxy()
                 .timeout(REQUEST_TIMEOUT)
-                .connect_timeout(CONNECT_TIMEOUT)
+                .station_route(CONNECT_TIMEOUT)
                 .user_agent(concat!("YesChoyDesktop/", env!("CARGO_PKG_VERSION")))
                 .build()
                 .map_err(|_| ())
@@ -612,7 +613,10 @@ async fn send_json(
             .header(CONTENT_TYPE, "application/json")
             .body(body.to_string());
     }
-    let response = request.send().await.map_err(map_reqwest_error)?;
+    let response = request
+        .send_with_fallback()
+        .await
+        .map_err(map_reqwest_error)?;
     read_body(response).await
 }
 
@@ -1267,7 +1271,7 @@ pub(crate) fn neutral_station_for(url: &str) -> Option<(String, NeutralPaths)> {
 }
 
 /// 诊断层（PRD 6.7，批次 3 #2）复用的只读 HTTPS 客户端：
-/// https-only、无重定向、无代理，与账户请求同一套约束。
+/// https-only、无重定向，跟随系统代理，与账户请求同一套约束。
 pub(crate) fn shared_http_client() -> Result<&'static Client, ()> {
     client()
 }
@@ -3213,8 +3217,10 @@ async fn open_wallet(state: &AccountV2State, line_id: &str) -> Result<(), String
 mod tests {
     #[test]
     fn inspect_deadline_stays_short_so_home_never_waits_a_minute() {
-        assert!(INSPECT_DEADLINE <= std::time::Duration::from_secs(5));
-        assert!(CONNECT_TIMEOUT <= std::time::Duration::from_secs(2));
+        assert!(INSPECT_DEADLINE <= std::time::Duration::from_secs(8));
+        assert!(CONNECT_TIMEOUT <= std::time::Duration::from_secs(4));
+        // 代理卡死时：等满一条线路，换另一条线路建连，还要剩时间收发。
+        assert!(INSPECT_DEADLINE >= CONNECT_TIMEOUT * 2 + std::time::Duration::from_secs(1));
         assert!(REQUEST_TIMEOUT <= std::time::Duration::from_secs(10));
     }
 
