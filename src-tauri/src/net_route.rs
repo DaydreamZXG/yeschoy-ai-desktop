@@ -135,7 +135,7 @@ fn system_proxy(url: &Url) -> Option<Url> {
         match slot.as_ref() {
             Some(system) if system.read_at.elapsed() < SYSTEM_REFRESH => system.matcher.clone(),
             _ => {
-                let matcher = Arc::new(Matcher::from_system());
+                let matcher = Arc::new(read_system());
                 *slot = Some(SystemProxy {
                     read_at: Instant::now(),
                     matcher: matcher.clone(),
@@ -169,6 +169,89 @@ fn system_proxy(url: &Url) -> Option<Url> {
         proxy.set_password(Some(&password)).ok()?;
     }
     Some(proxy)
+}
+
+fn read_system() -> Matcher {
+    #[cfg(windows)]
+    if let Some(matcher) = windows_matcher() {
+        return matcher;
+    }
+    Matcher::from_system()
+}
+
+/// hyper-util 把 `ProxyServer` 整串当成一个地址，读不懂 v2rayN 这类软件写的
+/// `http=127.0.0.1:10809;https=127.0.0.1:10809` 分协议写法，这种写法由这里接手。
+#[cfg(windows)]
+fn windows_matcher() -> Option<Matcher> {
+    let from_env = [
+        "HTTPS_PROXY",
+        "https_proxy",
+        "HTTP_PROXY",
+        "http_proxy",
+        "ALL_PROXY",
+        "all_proxy",
+    ]
+    .iter()
+    .any(|key| std::env::var_os(key).is_some_and(|value| !value.is_empty()));
+    if from_env {
+        return None;
+    }
+    let settings = winreg::RegKey::predef(winreg::enums::HKEY_CURRENT_USER)
+        .open_subkey(r"Software\Microsoft\Windows\CurrentVersion\Internet Settings")
+        .ok()?;
+    if settings.get_value::<u32, _>("ProxyEnable").unwrap_or(0) == 0 {
+        return None;
+    }
+    let (http, https) = split_proxy_server(&settings.get_value::<String, _>("ProxyServer").ok()?)?;
+    let no = settings
+        .get_value::<String, _>("ProxyOverride")
+        .map(|value| no_proxy_list(&value))
+        .unwrap_or_default();
+    Some(Matcher::builder().http(http).https(https).no(no).build())
+}
+
+/// 分协议的 `ProxyServer` → (http 请求用的代理, https 请求用的代理)；不是分协议写法时返回 `None`。
+#[cfg_attr(not(windows), allow(dead_code))]
+fn split_proxy_server(value: &str) -> Option<(String, String)> {
+    if !value.contains('=') {
+        return None;
+    }
+    let (mut http, mut https, mut socks) = (None, None, None);
+    for part in value.split(';') {
+        let Some((scheme, address)) = part.split_once('=') else {
+            continue;
+        };
+        let address = address.trim();
+        if address.is_empty() {
+            continue;
+        }
+        let with_scheme = |scheme: &str| {
+            if address.contains("://") {
+                address.to_owned()
+            } else {
+                format!("{scheme}://{address}")
+            }
+        };
+        match scheme.trim().to_ascii_lowercase().as_str() {
+            "http" => http = Some(with_scheme("http")),
+            "https" => https = Some(with_scheme("http")),
+            "socks" => socks = Some(with_scheme("socks5")),
+            _ => {}
+        }
+    }
+    let http = http.or_else(|| socks.clone()).unwrap_or_default();
+    let https = https.or(socks).unwrap_or_default();
+    Some((http, https))
+}
+
+#[cfg_attr(not(windows), allow(dead_code))]
+fn no_proxy_list(value: &str) -> String {
+    value
+        .split(';')
+        .map(str::trim)
+        .collect::<Vec<_>>()
+        .join(",")
+        .replace("*.", "")
 }
 
 #[derive(Clone)]
@@ -264,6 +347,33 @@ mod tests {
             }
         });
         address
+    }
+
+    #[test]
+    fn windows_per_protocol_proxy_server_is_split() {
+        assert_eq!(split_proxy_server("127.0.0.1:7890"), None);
+        assert_eq!(
+            split_proxy_server("http=127.0.0.1:10809;https=127.0.0.1:10808"),
+            Some((
+                "http://127.0.0.1:10809".into(),
+                "http://127.0.0.1:10808".into()
+            ))
+        );
+        assert_eq!(
+            split_proxy_server("socks=127.0.0.1:1080"),
+            Some((
+                "socks5://127.0.0.1:1080".into(),
+                "socks5://127.0.0.1:1080".into()
+            ))
+        );
+        assert_eq!(
+            split_proxy_server("http=127.0.0.1:8080;ftp=127.0.0.1:21"),
+            Some(("http://127.0.0.1:8080".into(), String::new()))
+        );
+        assert_eq!(
+            no_proxy_list("*.corp.test; localhost;<local>"),
+            "corp.test,localhost,<local>"
+        );
     }
 
     #[test]
