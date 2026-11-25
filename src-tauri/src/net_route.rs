@@ -176,14 +176,16 @@ fn read_system() -> Matcher {
     if let Some(matcher) = windows_matcher() {
         return matcher;
     }
+    #[cfg(target_os = "macos")]
+    if let Some(matcher) = mac_socks_matcher() {
+        return matcher;
+    }
     Matcher::from_system()
 }
 
-/// hyper-util 把 `ProxyServer` 整串当成一个地址，读不懂 v2rayN 这类软件写的
-/// `http=127.0.0.1:10809;https=127.0.0.1:10809` 分协议写法，这种写法由这里接手。
-#[cfg(windows)]
-fn windows_matcher() -> Option<Matcher> {
-    let from_env = [
+#[cfg(any(windows, target_os = "macos"))]
+fn proxy_env_set() -> bool {
+    [
         "HTTPS_PROXY",
         "https_proxy",
         "HTTP_PROXY",
@@ -192,8 +194,82 @@ fn windows_matcher() -> Option<Matcher> {
         "all_proxy",
     ]
     .iter()
-    .any(|key| std::env::var_os(key).is_some_and(|value| !value.is_empty()));
-    if from_env {
+    .any(|key| std::env::var_os(key).is_some_and(|value| !value.is_empty()))
+}
+
+/// hyper-util 在 macOS 上只读「网页代理 / 安全网页代理」，不读「SOCKS 代理」；
+/// 只开了 SOCKS 的情况由这里接手。
+#[cfg(target_os = "macos")]
+fn mac_socks_matcher() -> Option<Matcher> {
+    use system_configuration::core_foundation::array::CFArray;
+    use system_configuration::core_foundation::base::{CFType, CFTypeRef, TCFType};
+    use system_configuration::core_foundation::number::CFNumber;
+    use system_configuration::core_foundation::string::{CFString, CFStringRef};
+    use system_configuration::dynamic_store::SCDynamicStoreBuilder;
+    use system_configuration::sys::schema_definitions::{
+        kSCPropNetProxiesExceptionsList, kSCPropNetProxiesHTTPEnable, kSCPropNetProxiesHTTPSEnable,
+        kSCPropNetProxiesSOCKSEnable, kSCPropNetProxiesSOCKSPort, kSCPropNetProxiesSOCKSProxy,
+    };
+
+    if proxy_env_set() {
+        return None;
+    }
+    let proxies = SCDynamicStoreBuilder::new("yeschoy")
+        .build()?
+        .get_proxies()?;
+    let number = |key: CFStringRef| {
+        proxies
+            .find(key)
+            .and_then(|value| value.downcast::<CFNumber>())
+            .and_then(|value| value.to_i32())
+    };
+    let (http, https, socks) = unsafe {
+        (
+            number(kSCPropNetProxiesHTTPEnable) == Some(1),
+            number(kSCPropNetProxiesHTTPSEnable) == Some(1),
+            number(kSCPropNetProxiesSOCKSEnable) == Some(1),
+        )
+    };
+    if http || https || !socks {
+        return None;
+    }
+    let host = proxies
+        .find(unsafe { kSCPropNetProxiesSOCKSProxy })
+        .and_then(|value| value.downcast::<CFString>())?
+        .to_string();
+    if host.is_empty() {
+        return None;
+    }
+    let port = number(unsafe { kSCPropNetProxiesSOCKSPort }).unwrap_or(1080);
+    let no = proxies
+        .find(unsafe { kSCPropNetProxiesExceptionsList })
+        .and_then(|value| value.downcast::<CFArray>())
+        .map(|list| {
+            list.get_all_values()
+                .into_iter()
+                .filter_map(|item| {
+                    unsafe { CFType::wrap_under_get_rule(item as CFTypeRef) }.downcast::<CFString>()
+                })
+                .map(|item| item.to_string().replace("*.", ""))
+                .collect::<Vec<_>>()
+                .join(",")
+        })
+        .unwrap_or_default();
+    let socks = format!("socks5h://{host}:{port}");
+    Some(
+        Matcher::builder()
+            .http(socks.clone())
+            .https(socks)
+            .no(no)
+            .build(),
+    )
+}
+
+/// hyper-util 把 `ProxyServer` 整串当成一个地址，读不懂 v2rayN 这类软件写的
+/// `http=127.0.0.1:10809;https=127.0.0.1:10809` 分协议写法，这种写法由这里接手。
+#[cfg(windows)]
+fn windows_matcher() -> Option<Matcher> {
+    if proxy_env_set() {
         return None;
     }
     let settings = winreg::RegKey::predef(winreg::enums::HKEY_CURRENT_USER)
@@ -241,7 +317,7 @@ fn split_proxy_server(value: &str) -> Option<(String, String)> {
         match scheme.trim().to_ascii_lowercase().as_str() {
             "http" => http = Some(with_scheme("http")),
             "https" => https = Some(with_scheme("http")),
-            "socks" => socks = Some(with_scheme("socks5")),
+            "socks" => socks = Some(with_scheme("socks5h")),
             _ => {}
         }
     }
@@ -368,8 +444,8 @@ mod tests {
         assert_eq!(
             split_proxy_server("socks=127.0.0.1:1080"),
             Some((
-                "socks5://127.0.0.1:1080".into(),
-                "socks5://127.0.0.1:1080".into()
+                "socks5h://127.0.0.1:1080".into(),
+                "socks5h://127.0.0.1:1080".into()
             ))
         );
         assert_eq!(
