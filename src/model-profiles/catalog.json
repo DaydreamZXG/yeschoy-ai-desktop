@@ -35,6 +35,41 @@
       "toolUse": true
     },
     {
+      "id": "gpt-6.2-sol",
+      "displayName": "GPT-6.2 Sol",
+      "reasoningLevels": ["low", "medium", "high", "xhigh", "max"],
+      "input": ["text", "image"],
+      "contextWindow": 1050000,
+      "maxOutputTokens": 128000,
+      "sources": ["https://developers.openai.com/api/docs/models/gpt-6.2-sol"],
+      "toolUse": true
+    },
+    {
+      "id": "gpt-6.2-astra",
+      "displayName": "GPT-6.2 Astra",
+      "reasoningLevels": ["low", "medium", "high", "xhigh", "max"],
+      "input": ["text", "image"],
+      "contextWindow": 1050000,
+      "maxOutputTokens": 128000,
+      "sources": [
+        "https://developers.openai.com/api/docs/models/gpt-6.2-astra"
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "gpt-6.1-terra",
+      "displayName": "GPT-6.1 Terra",
+      "reasoningLevels": ["none", "low", "medium", "high", "xhigh", "max"],
+      "defaultReasoning": "medium",
+      "input": ["text", "image"],
+      "contextWindow": 1050000,
+      "maxOutputTokens": 128000,
+      "sources": [
+        "https://developers.openai.com/api/docs/models/gpt-6.1-terra"
+      ],
+      "toolUse": true
+    },
+    {
       "id": "gpt-6-luna",
       "displayName": "GPT-6 Luna",
       "reasoningLevels": ["none", "low", "medium", "high", "xhigh", "max"],

@@ -6380,7 +6380,7 @@ dependencies = [
 
 [[package]]
 name = "yeschoy-desktop"
-version = "0.5.4"
+version = "0.5.5"
 dependencies = [
  "aes-gcm",
  "async-stream",

@@ -339,6 +339,35 @@ fn catalog_value(model: &str, transport: CodexTransport) -> Result<Value, Adapte
     Ok(json!({"models": [entry]}))
 }
 
+/// 这几项是按型号目录填的。目录更新后（补了型号、改了档位），已经接好的
+/// 连接里还是旧值；只读检查不该因此当成被改过。
+const PROFILE_FIELDS: [&str; 7] = [
+    "display_name",
+    "supported_reasoning_levels",
+    "default_reasoning_level",
+    "supports_reasoning_summaries",
+    "context_window",
+    "max_context_window",
+    "input_modalities",
+];
+
+fn same_models(saved: &[u8], expected: &[u8]) -> bool {
+    let strip = |bytes: &[u8]| {
+        let mut value: Value = serde_json::from_slice(bytes).ok()?;
+        for model in value.get_mut("models")?.as_array_mut()? {
+            let model = model.as_object_mut()?;
+            // 只抹掉值：字段缺了 Codex 就读不了这份目录，得算被改过。
+            for field in PROFILE_FIELDS {
+                if let Some(value) = model.get_mut(field) {
+                    *value = Value::Null;
+                }
+            }
+        }
+        Some(value)
+    };
+    strip(saved).is_some_and(|saved| Some(saved) == strip(expected))
+}
+
 fn catalog(model: &str, transport: CodexTransport) -> Result<Vec<u8>, AdapterFailure> {
     serde_json::to_vec_pretty(&catalog_value(model, transport)?)
         .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_write_failed"))
@@ -668,7 +697,10 @@ impl Prepared {
             && provider.get("base_url").and_then(Item::as_str) == Some(self.base_url.as_str())
             && provider.get("wire_api").and_then(Item::as_str) == Some("responses")
             && auth_correct
-            && catalog.as_deref() == Some(self.catalog.as_slice())
+            && catalog.as_deref().is_some_and(|catalog| {
+                catalog == self.catalog.as_slice()
+                    || (!strict_default && same_models(catalog, &self.catalog))
+            })
             && !self.catalog.windows(3).any(|window| window == b"sk-");
         if correct {
             Ok(())
@@ -745,6 +777,27 @@ fn path_looks_like_cli(path: &Path) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_catalog_written_before_the_model_was_known_still_counts() {
+        let now = catalog("gpt-6.2-sol", CodexTransport::DirectResponses).unwrap();
+        let mut old: Value = serde_json::from_slice(&now).unwrap();
+        old["models"][0]["supported_reasoning_levels"] = json!([]);
+        old["models"][0]["default_reasoning_level"] = Value::Null;
+        old["models"][0]["display_name"] = json!("gpt-6.2-sol");
+        let old = serde_json::to_vec_pretty(&old).unwrap();
+        assert!(same_models(&old, &now));
+        let other = catalog("gpt-6.1-sol", CodexTransport::DirectResponses).unwrap();
+        assert!(!same_models(&other, &now));
+        assert!(!same_models(b"[1]", &now));
+        assert!(!same_models(b"7", &now));
+        let mut broken: Value = serde_json::from_slice(&now).unwrap();
+        broken["models"][0]
+            .as_object_mut()
+            .unwrap()
+            .remove("supported_reasoning_levels");
+        assert!(!same_models(&serde_json::to_vec(&broken).unwrap(), &now));
+    }
 
     #[test]
     fn provider_key_need_not_start_with_sk() {

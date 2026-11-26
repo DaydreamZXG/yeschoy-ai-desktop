@@ -424,6 +424,25 @@ describe("接入：选应用、选人、点一下", () => {
     expect(activate.mock.calls[1][0]).toMatchObject({ billingGroup: "promo" });
   });
 
+  it("型号旁边就能换方案，换了就按它接", async () => {
+    setup({
+      current: "cla",
+      initialApp: "codex_desktop",
+      models: [
+        priced("claude-sonnet-4-5-20250929", ["default", "vip", "promo"]),
+      ],
+    });
+    await ready();
+    const plan = screen.getByLabelText("价格方案");
+    fireEvent.change(plan, { target: { value: "promo" } });
+    expect(plan).toHaveValue("promo");
+    expect(screen.getByTestId("kaifan-join-plan")).toHaveTextContent("promo");
+    answer("ready", "configuration_ready");
+    fireEvent.click(go());
+    await waitFor(() => expect(activate).toHaveBeenCalled());
+    expect(activate.mock.calls[0][0]).toMatchObject({ billingGroup: "promo" });
+  });
+
   it("名片上挑的型号和方案排在存过的前面：那是用户自己定的", async () => {
     setup({
       current: "cla",
