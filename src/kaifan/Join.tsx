@@ -961,21 +961,27 @@ export function Join({
                       ))}
                     </select>
                   )}
-                  {modelId && offered.length > 1 && !gone && (
-                    <select
-                      className="inp"
-                      aria-label={t("kaifan.card.plan")}
-                      data-testid="kaifan-join-plan-select"
-                      value={billingGroup}
-                      onChange={(event) => setChosenPlan(event.target.value)}
-                    >
-                      {offered.map((id) => (
-                        <option key={id} value={id}>
-                          {planName(id)}
-                        </option>
-                      ))}
-                    </select>
-                  )}
+                  {modelId &&
+                    (offered.length > 1 || (gone && offered.length > 0)) && (
+                      <select
+                        className="inp"
+                        aria-label={t("kaifan.card.plan")}
+                        data-testid="kaifan-join-plan-select"
+                        value={billingGroup}
+                        onChange={(event) => setChosenPlan(event.target.value)}
+                      >
+                        {gone && (
+                          <option value={billingGroup} disabled>
+                            {planName(billingGroup)}
+                          </option>
+                        )}
+                        {offered.map((id) => (
+                          <option key={id} value={id}>
+                            {planName(id)}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                 </p>
                 <div className="cards">
                   {people.map((id, index) => {

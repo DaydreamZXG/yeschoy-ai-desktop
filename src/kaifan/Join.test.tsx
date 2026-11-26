@@ -492,6 +492,22 @@ describe("接入：选应用、选人、点一下", () => {
     });
   });
 
+  it("存过的方案不提供了，也能直接在下拉框里另挑一个", async () => {
+    setup({
+      initialApp: "codex_desktop",
+      models: [priced("claude-sonnet-4-5-20250929", ["vip", "promo"])],
+      connections: savedOn("gone"),
+    });
+    await ready();
+    const plan = screen.getByLabelText("价格方案");
+    expect(plan).toHaveValue("gone");
+    fireEvent.change(plan, { target: { value: "promo" } });
+    answer("ready", "configuration_ready");
+    fireEvent.click(go());
+    await waitFor(() => expect(activate).toHaveBeenCalled());
+    expect(activate.mock.calls[0][0]).toMatchObject({ billingGroup: "promo" });
+  });
+
   it("在一个应用上点头换的方案，不会带到另一个应用上", async () => {
     setup({
       initialApp: "codex_desktop",
