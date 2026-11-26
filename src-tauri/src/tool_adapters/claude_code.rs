@@ -348,9 +348,10 @@ impl Prepared {
                                     && model["behavesAs"].as_str().is_some_and(|family| {
                                         family
                                             == crate::tool_model_profile::claude_code_behaves_as(id)
-                                            // 0.5.4 以前目录查找分大小写，大写型号写的是默认族。
-                                            || (family == crate::tool_model_profile::CLAUDE_BEHAVES_AS
-                                                && id.bytes().any(|b| b.is_ascii_uppercase()))
+                                            // 接的时候目录还不认识这个型号（目录后来补上，或
+                                            // 0.5.4 以前查找分大小写），写的是默认族。
+                                            || (!strict_default
+                                                && family == crate::tool_model_profile::CLAUDE_BEHAVES_AS)
                                     })
                             })
                         })

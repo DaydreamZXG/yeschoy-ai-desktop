@@ -16,6 +16,10 @@ describe("balanceAlert (PRD 6.2 single-threshold guidance)", () => {
   it("is null when money is unavailable or not CNY", () => {
     expect(balanceAlert(undefined)).toBeNull();
     expect(balanceAlert(money("3.20", "USD"))).toBeNull();
+    expect(balanceAlert(money("0.50", "USD"))).toEqual({
+      level: "low",
+      amount: "0.50",
+    });
     expect(balanceAlert(money("", ""))).toBeNull();
   });
 

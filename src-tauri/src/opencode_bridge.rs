@@ -8,7 +8,9 @@
 //!   并且只在桌面助手开着时有用，拿去打中转站没有任何用处；
 //! - 中转站的 key 留在系统钥匙串里，由这座桥按模型取出来再转发。
 //!
-//! 协议是 OpenAI Chat Completions 原样透传，不做任何转换。
+//! 协议是 OpenAI Chat Completions 透传，只把思考强度换成这个型号认的写法：
+//! 应用自带的档位（比如 OpenCode 的 medium）型号不一定有，DeepSeek 关思考
+//! 也不是 `reasoning_effort: none`。
 use crate::net_route::SendWithFallback;
 use axum::{
     body::{to_bytes, Body},
@@ -103,8 +105,16 @@ async fn chat(state: &BridgeState, request: Request<Body>) -> Response {
     let Ok(bytes) = to_bytes(request.into_body(), MAX_REQUEST_BODY_BYTES).await else {
         return error(StatusCode::PAYLOAD_TOO_LARGE, "request too large");
     };
-    let Ok(body) = serde_json::from_slice::<Value>(&bytes) else {
+    let Ok(mut body) = serde_json::from_slice::<Value>(&bytes) else {
         return error(StatusCode::BAD_REQUEST, "request body must be JSON");
+    };
+    let bytes = if crate::tool_model_profile::normalize_chat_reasoning(&mut body) {
+        match serde_json::to_vec(&body) {
+            Ok(bytes) => bytes.into(),
+            Err(_) => return error(StatusCode::BAD_REQUEST, "request body must be JSON"),
+        }
+    } else {
+        bytes
     };
     let model = body
         .get("model")

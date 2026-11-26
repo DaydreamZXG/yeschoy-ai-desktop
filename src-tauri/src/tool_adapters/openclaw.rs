@@ -188,6 +188,23 @@ fn child<'a>(
         .ok_or(PARSE_FAILED)
 }
 
+/// 只声明 `reasoning: true` 的话，OpenClaw 不认 xhigh、max；档位要照目录写全。
+fn model_entry(id: &str) -> Value {
+    let mut entry = json!({ "id": id, "name": id });
+    let levels = crate::tool_model_profile::profile_any_case(id)
+        .map(|profile| profile.reasoning_levels.as_slice())
+        .unwrap_or_default();
+    if !levels.is_empty() {
+        let mut compat = json!({ "supportedReasoningEfforts": levels });
+        if levels.iter().any(|level| level == "none") {
+            compat["reasoningEffortMap"] = json!({ "off": "none" });
+        }
+        entry["reasoning"] = true.into();
+        entry["compat"] = compat;
+    }
+    entry
+}
+
 pub(crate) fn render(
     existing: Option<&[u8]>,
     model: &str,
@@ -205,10 +222,7 @@ pub(crate) fn render(
     }
     let object = root.as_object_mut().ok_or(PARSE_FAILED)?;
 
-    let models: Vec<Value> = model_ids
-        .iter()
-        .map(|id| json!({ "id": id, "name": id }))
-        .collect();
+    let models: Vec<Value> = model_ids.iter().map(|id| model_entry(id)).collect();
     child(child(object, "models")?, "providers")?.insert(
         PROVIDER_ID.into(),
         json!({
@@ -764,8 +778,21 @@ mod tests {
                 "apiKey": token(),
                 "api": "openai-completions",
                 "models": [
-                    { "id": "glm-5.3", "name": "glm-5.3" },
-                    { "id": "kimi-k3", "name": "kimi-k3" },
+                    {
+                        "id": "glm-5.3",
+                        "name": "glm-5.3",
+                        "reasoning": true,
+                        "compat": {
+                            "supportedReasoningEfforts": ["none", "low", "high", "max"],
+                            "reasoningEffortMap": { "off": "none" },
+                        },
+                    },
+                    {
+                        "id": "kimi-k3",
+                        "name": "kimi-k3",
+                        "reasoning": true,
+                        "compat": { "supportedReasoningEfforts": ["low", "high", "max"] },
+                    },
                 ],
             })
         );

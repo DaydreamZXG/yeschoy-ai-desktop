@@ -89,7 +89,25 @@ pub(crate) fn render(
         .ok_or(())?;
     let mut models = Map::new();
     for id in model_ids {
-        models.insert(id.clone(), serde_json::json!({ "name": id }));
+        let mut entry = serde_json::json!({ "name": id });
+        let levels = crate::tool_model_profile::profile_any_case(id)
+            .map(|profile| profile.reasoning_levels.as_slice())
+            .unwrap_or_default();
+        // 自建的厂商 OpenCode 不知道有哪些思考档位，得一档一档写出来才有得选。
+        if !levels.is_empty() {
+            let variants: Map<String, Value> = levels
+                .iter()
+                .map(|level| {
+                    (
+                        level.clone(),
+                        serde_json::json!({ "reasoningEffort": level }),
+                    )
+                })
+                .collect();
+            entry["reasoning"] = true.into();
+            entry["variants"] = Value::Object(variants);
+        }
+        models.insert(id.clone(), entry);
     }
     providers.insert(
         PROVIDER_ID.into(),
@@ -257,7 +275,10 @@ mod tests {
             PROXY_BASE
         );
         assert_eq!(value["model"], "yeschoy/glm-5.3");
-        assert!(value["provider"]["yeschoy"]["models"]["kimi-k3"].is_object());
+        let kimi = &value["provider"]["yeschoy"]["models"]["kimi-k3"];
+        assert_eq!(kimi["reasoning"], true);
+        assert_eq!(kimi["variants"]["max"]["reasoningEffort"], "max");
+        assert!(kimi["variants"].get("none").is_none());
         let text = String::from_utf8(bytes).unwrap();
         assert!(!text.contains("sk-"), "relay key must never be written");
     }
