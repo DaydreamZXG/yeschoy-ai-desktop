@@ -41,6 +41,7 @@ import {
   planLabelOf,
   plansForApp,
   type CardPicks,
+  modelRoom,
 } from "./cardInfo";
 import {
   installOutcome,
@@ -166,6 +167,12 @@ export function Join({
   const [who, setWho] = useState<RosterId>(current);
   const [chosenModel, setChosenModel] = useState("");
   const [chosenPlan, setChosenPlan] = useState("");
+  /** 这次亲手勾过、换过方案的「一起带上」的型号（型号 → 带不带、用哪个方案）。 */
+  const [extras, setExtras] = useState<
+    Record<string, { on: boolean; plan?: string }>
+  >({});
+  /** 用户点过就照他的；没点过时，有型号的方案被换了就先摊开给他看。 */
+  const [showAlong, setShowAlong] = useState<boolean | null>(null);
   const [install, setInstall] = useState("");
   const [scan, setScan] = useState<Scan>("loading");
   const [targets, setTargets] = useState<ActivationTarget[]>([]);
@@ -177,6 +184,10 @@ export function Join({
   // Cursor++ 是用户自己装的第三方插件：改它的配置前先问一句。
   const [cursorppAllowed, setCursorppAllowed] = useState(false);
   useEffect(() => setCursorppAllowed(false), [app, open]);
+  useEffect(() => {
+    setExtras({});
+    setShowAlong(null);
+  }, [app, open]);
 
   const settled = useRef(onSettled);
   settled.current = onSettled;
@@ -379,6 +390,81 @@ export function Join({
   const nextGroup =
     others.find((id) => id === DEFAULT_BILLING_GROUP) ?? others[0];
 
+  // 除了她，这个应用里还能一起带上的型号：原来名单里的排前面、默认带着。
+  const room = modelRoom(app);
+  const plansOf = (id: string) =>
+    plansForApp(
+      app,
+      usable.find((item) => item.id === id),
+    ).map((group) => group.id);
+  const priced = (id: string) =>
+    (usable.find((item) => item.id === id)?.billing?.groups ?? []).length > 0;
+  const companions =
+    room === "one" || !modelId
+      ? []
+      : [
+          ...remembered.map((item) => item.modelId),
+          ...usable.map((m) => m.id),
+        ].filter(
+          (id, index, all) =>
+            all.indexOf(id) === index &&
+            id !== modelId &&
+            usable.some((item) => item.id === id) &&
+            (!priced(id) ||
+              (room === "sameKey"
+                ? plansOf(id).includes(billingGroup)
+                : plansOf(id).length > 0)),
+        );
+  // WorkBuddy 的型号目录只加不删：已经接进去的型号不给去掉，免得留下一个用不了的型号。
+  const frozen = (id: string) =>
+    app === "workbuddy" && remembered.some((item) => item.modelId === id);
+  const along = (id: string) =>
+    frozen(id) ||
+    (extras[id]?.on ?? remembered.some((item) => item.modelId === id));
+  const extraPlan = (id: string, group: string) => {
+    if (room === "sameKey") return group;
+    const offer = plansOf(id);
+    const ok = (plan: string | undefined) =>
+      plan !== undefined && (offer.length === 0 || offer.includes(plan))
+        ? plan
+        : undefined;
+    const item = usable.find((entry) => entry.id === id);
+    return (
+      ok(extras[id]?.plan) ??
+      ok(remembered.find((entry) => entry.modelId === id)?.billingGroup) ??
+      ok(pickedPlan(item, picks)) ??
+      ok(chooseBillingGroup(item, "")) ??
+      offer[0] ??
+      DEFAULT_BILLING_GROUP
+    );
+  };
+  const brought = companions.filter(along);
+  // 原来名单里的型号，存过的方案站点不提供了：换成了哪个要让用户看得见。
+  const shifted = brought.some((id) => {
+    const was = remembered.find((item) => item.modelId === id)?.billingGroup;
+    return was !== undefined && was !== extraPlan(id, billingGroup);
+  });
+  const listed = showAlong ?? shifted;
+  const bindings = (group: string): ModelBinding[] => [
+    { modelId, billingGroup: group },
+    ...brought.map((id) => ({
+      modelId: id,
+      billingGroup: extraPlan(id, group),
+    })),
+  ];
+  // 一起带上的型号跟原来名单不一样了（勾了、去了、换了方案），这次点下去也算换。
+  const before = remembered.filter(
+    (item, index, all) =>
+      item.modelId !== modelId &&
+      all.findIndex((entry) => entry.modelId === item.modelId) === index,
+  );
+  const alongChanged =
+    brought.length !== before.length ||
+    brought.some(
+      (id) =>
+        before.find((item) => item.modelId === id)?.billingGroup !==
+        extraPlan(id, billingGroup),
+    );
   const name = t(`roster.${who}.name`);
   // 这个应用在现在这个站上已经接好了：是谁在干活，这次点下去会变什么。
   const worker = workerOf(saved, lineId);
@@ -387,7 +473,8 @@ export function Join({
     : worker !== who
       ? "swap"
       : saved?.modelId !== modelId ||
-          (!!saved.billingGroup && saved.billingGroup !== billingGroup)
+          (!!saved.billingGroup && saved.billingGroup !== billingGroup) ||
+          alongChanged
         ? "retune"
         : "same";
   const appInfo = findApp(app);
@@ -410,17 +497,6 @@ export function Join({
   const barred =
     !!preset && preset.onlyTools.length > 0 && !preset.onlyTools.includes(app);
 
-  // 这个应用原来的名单里还在站上的模型照旧留着，只把默认换成她。
-  const bindings = (group: string): ModelBinding[] => [
-    { modelId, billingGroup: group },
-    ...(saved?.models ?? []).filter(
-      (item, index, all) =>
-        remembered.includes(item) &&
-        item.modelId !== modelId &&
-        all.findIndex((entry) => entry.modelId === item.modelId) === index &&
-        usable.some((entry) => entry.id === item.modelId),
-    ),
-  ];
   // 存过的方案站点不提供了：发出去只会被拒。先问要不要换，不自己换。
   const askPlan = (group: string) => {
     if (!gone || group !== billingGroup || !nextGroup) return false;
@@ -1024,6 +1100,76 @@ export function Join({
                     );
                   })}
                 </div>
+                {!retired && companions.length > 0 && (
+                  <div className="along" data-testid="kaifan-join-along">
+                    <button
+                      type="button"
+                      className="sm"
+                      aria-expanded={listed}
+                      onClick={() => setShowAlong(!listed)}
+                    >
+                      {brought.length > 0
+                        ? t("kaifan.join.along", { count: brought.length })
+                        : t("kaifan.join.alongNone")}
+                      {listed ? " ▴" : " ▾"}
+                    </button>
+                    {listed && (
+                      <ul>
+                        {companions.map((id) => {
+                          const offer = plansOf(id);
+                          const on = along(id);
+                          const label = modelDisplayName(id);
+                          return (
+                            <li key={id}>
+                              <label>
+                                <input
+                                  type="checkbox"
+                                  checked={on}
+                                  disabled={frozen(id)}
+                                  onChange={(event) => {
+                                    const checked = event.target.checked;
+                                    setExtras((map) => ({
+                                      ...map,
+                                      [id]: { ...map[id], on: checked },
+                                    }));
+                                  }}
+                                />
+                                {label}
+                              </label>
+                              {on && room === "many" && offer.length > 1 && (
+                                <select
+                                  className="inp"
+                                  aria-label={t("kaifan.join.alongPlan", {
+                                    model: label,
+                                  })}
+                                  value={extraPlan(id, billingGroup)}
+                                  onChange={(event) => {
+                                    const plan = event.target.value;
+                                    setExtras((map) => ({
+                                      ...map,
+                                      [id]: { on: true, plan },
+                                    }));
+                                  }}
+                                >
+                                  {offer.map((group) => (
+                                    <option key={group} value={group}>
+                                      {planName(group)}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                    {listed && room === "sameKey" && (
+                      <small>
+                        {t("kaifan.join.alongSameKey", { app: appName })}
+                      </small>
+                    )}
+                  </div>
+                )}
                 {retired ? (
                   <p
                     className="mend"
@@ -1178,6 +1324,13 @@ export function Join({
                     {modelId && offered.length > 1 && !gone && (
                       <em data-testid="kaifan-join-plan">
                         {planName(billingGroup)}
+                      </em>
+                    )}
+                    {modelId && brought.length > 0 && (
+                      <em data-testid="kaifan-join-along-count">
+                        {t("kaifan.join.alongSummary", {
+                          count: brought.length,
+                        })}
                       </em>
                     )}
                   </p>
