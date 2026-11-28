@@ -399,7 +399,8 @@ export function Join({
     ).map((group) => group.id);
   const priced = (id: string) =>
     (usable.find((item) => item.id === id)?.billing?.groups ?? []).length > 0;
-  const companions =
+  // Pi 只有一把密钥：能带上谁取决于这次用哪个方案，站点换了方案要重新算。
+  const companionsFor = (group: string) =>
     room === "one" || !modelId
       ? []
       : [
@@ -412,9 +413,10 @@ export function Join({
             usable.some((item) => item.id === id) &&
             (!priced(id) ||
               (room === "sameKey"
-                ? plansOf(id).includes(billingGroup)
+                ? plansOf(id).includes(group)
                 : plansOf(id).length > 0)),
         );
+  const companions = companionsFor(billingGroup);
   // WorkBuddy 的型号目录只加不删：已经接进去的型号不给去掉，免得留下一个用不了的型号。
   const frozen = (id: string) =>
     app === "workbuddy" && remembered.some((item) => item.modelId === id);
@@ -440,17 +442,20 @@ export function Join({
   };
   const brought = companions.filter(along);
   // 原来名单里的型号，存过的方案站点不提供了：换成了哪个要让用户看得见。
-  const shifted = brought.some((id) => {
+  const moved = (id: string) => {
     const was = remembered.find((item) => item.modelId === id)?.billingGroup;
     return was !== undefined && was !== extraPlan(id, billingGroup);
-  });
+  };
+  const shifted = brought.some(moved);
   const listed = showAlong ?? shifted;
   const bindings = (group: string): ModelBinding[] => [
     { modelId, billingGroup: group },
-    ...brought.map((id) => ({
-      modelId: id,
-      billingGroup: extraPlan(id, group),
-    })),
+    ...companionsFor(group)
+      .filter(along)
+      .map((id) => ({
+        modelId: id,
+        billingGroup: extraPlan(id, group),
+      })),
   ];
   // 一起带上的型号跟原来名单不一样了（勾了、去了、换了方案），这次点下去也算换。
   const before = remembered.filter(
@@ -1136,28 +1141,30 @@ export function Join({
                                 />
                                 {label}
                               </label>
-                              {on && room === "many" && offer.length > 1 && (
-                                <select
-                                  className="inp"
-                                  aria-label={t("kaifan.join.alongPlan", {
-                                    model: label,
-                                  })}
-                                  value={extraPlan(id, billingGroup)}
-                                  onChange={(event) => {
-                                    const plan = event.target.value;
-                                    setExtras((map) => ({
-                                      ...map,
-                                      [id]: { on: true, plan },
-                                    }));
-                                  }}
-                                >
-                                  {offer.map((group) => (
-                                    <option key={group} value={group}>
-                                      {planName(group)}
-                                    </option>
-                                  ))}
-                                </select>
-                              )}
+                              {on &&
+                                room === "many" &&
+                                (offer.length > 1 || moved(id)) && (
+                                  <select
+                                    className="inp"
+                                    aria-label={t("kaifan.join.alongPlan", {
+                                      model: label,
+                                    })}
+                                    value={extraPlan(id, billingGroup)}
+                                    onChange={(event) => {
+                                      const plan = event.target.value;
+                                      setExtras((map) => ({
+                                        ...map,
+                                        [id]: { on: true, plan },
+                                      }));
+                                    }}
+                                  >
+                                    {offer.map((group) => (
+                                      <option key={group} value={group}>
+                                        {planName(group)}
+                                      </option>
+                                    ))}
+                                  </select>
+                                )}
                             </li>
                           );
                         })}

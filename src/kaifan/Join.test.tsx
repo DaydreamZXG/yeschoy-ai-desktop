@@ -481,6 +481,27 @@ describe("接入：选应用、选人、点一下", () => {
     expect(go()).toHaveTextContent("照这个重新接");
   });
 
+  it("原来名单里的型号只剩一个方案了：也把换成的那个写出来", async () => {
+    setup({
+      initialApp: "codex_desktop",
+      models: [
+        priced("claude-sonnet-4-5-20250929", ["default"]),
+        priced("deepseek-v4", ["default"]),
+      ],
+      connections: [
+        {
+          ...savedOn("default")[0],
+          models: [
+            { modelId: "claude-sonnet-4-5-20250929", billingGroup: "default" },
+            { modelId: "deepseek-v4", billingGroup: "vip" },
+          ],
+        },
+      ],
+    });
+    await ready();
+    expect(within(alongBox()).getByRole("combobox")).toHaveValue("default");
+  });
+
   it("Cline 一次只认一个型号：不给一起带上", async () => {
     found([target("cline")]);
     setup({ initialApp: "cline" });
