@@ -353,6 +353,15 @@ const DIRECT_APPS: readonly string[] = [
 ];
 
 /** 这个应用接这个型号时能用的方案。 */
+/**
+ * 一个应用里能放几个型号：Cline、Hermes 一次只认一个；Pi 自己直连站点，只拿得到
+ * 一把密钥，带上的型号只能跟默认那个同一个方案；别的都是每个型号各用各的方案。
+ */
+export function modelRoom(app: string): "one" | "sameKey" | "many" {
+  if (app === "cline" || app === "hermes") return "one";
+  return app === "pi" ? "sameKey" : "many";
+}
+
 export function plansForApp(
   app: string,
   model: AccountModel | undefined,

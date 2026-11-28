@@ -362,6 +362,182 @@ describe("接入：选应用、选人、点一下", () => {
     },
   ];
 
+  const alongBox = () => screen.getByTestId("kaifan-join-along");
+  const openAlong = () =>
+    fireEvent.click(within(alongBox()).getByRole("button"));
+
+  it("一次带上好几个型号，每个型号用自己挑的方案", async () => {
+    setup({
+      initialApp: "codex_desktop",
+      models: [
+        priced("claude-sonnet-4-5-20250929", ["default", "promo"]),
+        priced("deepseek-v4", ["default", "promo"]),
+        priced("deepseek-v4-flash", ["default"]),
+      ],
+    });
+    await ready();
+    expect(within(alongBox()).getByRole("button")).toHaveTextContent(
+      "还能一起带上别的型号",
+    );
+    openAlong();
+    const boxes = within(alongBox()).getAllByRole("checkbox");
+    expect(boxes).toHaveLength(2);
+    fireEvent.click(boxes[0]);
+    fireEvent.click(boxes[1]);
+    // 只有一个方案的型号不给下拉框。
+    const plans = within(alongBox()).getAllByRole("combobox");
+    expect(plans).toHaveLength(1);
+    fireEvent.change(plans[0], { target: { value: "promo" } });
+    expect(screen.getByTestId("kaifan-join-along-count")).toHaveTextContent(
+      "另带 2 个型号",
+    );
+    answer("ready", "configuration_ready");
+    fireEvent.click(go());
+    await waitFor(() => expect(activate).toHaveBeenCalled());
+    expect(activate.mock.calls[0][0]).toMatchObject({
+      modelId: "claude-sonnet-4-5-20250929",
+      billingGroup: "default",
+      models: [
+        { modelId: "claude-sonnet-4-5-20250929", billingGroup: "default" },
+        { modelId: "deepseek-v4", billingGroup: "promo" },
+        { modelId: "deepseek-v4-flash", billingGroup: "default" },
+      ],
+    });
+  });
+
+  it("原来名单里的型号默认带着；去掉勾就不再写进去", async () => {
+    setup({
+      initialApp: "codex_desktop",
+      connections: [
+        {
+          ...savedOn("default")[0],
+          models: [
+            { modelId: "claude-sonnet-4-5-20250929", billingGroup: "default" },
+            { modelId: "deepseek-v4", billingGroup: "default" },
+          ],
+        },
+      ],
+    });
+    await ready();
+    expect(within(alongBox()).getByRole("button")).toHaveTextContent(
+      "一起带上 1 个型号",
+    );
+    openAlong();
+    const boxes = within(alongBox()).getAllByRole("checkbox");
+    expect(boxes[0]).toBeChecked();
+    expect(boxes[1]).not.toBeChecked();
+    fireEvent.click(boxes[0]);
+    expect(go()).toHaveTextContent("照这个重新接");
+    answer("ready", "configuration_ready");
+    fireEvent.click(go());
+    await waitFor(() => expect(activate).toHaveBeenCalled());
+    expect(activate.mock.calls[0][0].models).toEqual([
+      { modelId: "claude-sonnet-4-5-20250929", billingGroup: "default" },
+    ]);
+  });
+
+  it("WorkBuddy 已经接进去的型号不给去掉勾", async () => {
+    found([target("claude_desktop"), target("workbuddy")]);
+    setup({
+      initialApp: "workbuddy",
+      connections: [
+        {
+          ...savedOn("default")[0],
+          toolId: "workbuddy",
+          models: [
+            { modelId: "claude-sonnet-4-5-20250929", billingGroup: "default" },
+            { modelId: "deepseek-v4", billingGroup: "default" },
+          ],
+        },
+      ],
+    });
+    await ready();
+    openAlong();
+    const boxes = within(alongBox()).getAllByRole("checkbox");
+    expect(boxes[0]).toBeChecked();
+    expect(boxes[0]).toBeDisabled();
+    expect(boxes[1]).not.toBeDisabled();
+  });
+
+  it("原来名单里的型号方案不提供了：换成哪个先摊开给人看", async () => {
+    setup({
+      initialApp: "codex_desktop",
+      models: [
+        priced("claude-sonnet-4-5-20250929", ["default"]),
+        priced("deepseek-v4", ["default", "promo"]),
+      ],
+      connections: [
+        {
+          ...savedOn("default")[0],
+          models: [
+            { modelId: "claude-sonnet-4-5-20250929", billingGroup: "default" },
+            { modelId: "deepseek-v4", billingGroup: "vip" },
+          ],
+        },
+      ],
+    });
+    await ready();
+    expect(within(alongBox()).getByRole("combobox")).toHaveValue("default");
+    expect(go()).toHaveTextContent("照这个重新接");
+  });
+
+  it("原来名单里的型号只剩一个方案了：也把换成的那个写出来", async () => {
+    setup({
+      initialApp: "codex_desktop",
+      models: [
+        priced("claude-sonnet-4-5-20250929", ["default"]),
+        priced("deepseek-v4", ["default"]),
+      ],
+      connections: [
+        {
+          ...savedOn("default")[0],
+          models: [
+            { modelId: "claude-sonnet-4-5-20250929", billingGroup: "default" },
+            { modelId: "deepseek-v4", billingGroup: "vip" },
+          ],
+        },
+      ],
+    });
+    await ready();
+    expect(within(alongBox()).getByRole("combobox")).toHaveValue("default");
+  });
+
+  it("Cline 一次只认一个型号：不给一起带上", async () => {
+    found([target("cline")]);
+    setup({ initialApp: "cline" });
+    await ready();
+    expect(screen.queryByTestId("kaifan-join-along")).toBeNull();
+  });
+
+  it("Pi 只有一把密钥：带上的型号跟她同一个方案，不给另选", async () => {
+    found([target("pi")]);
+    setup({
+      initialApp: "pi",
+      models: [
+        priced("claude-sonnet-4-5-20250929", ["default", "promo"]),
+        priced("deepseek-v4", ["default", "promo"]),
+        priced("deepseek-v4-flash", ["default"]),
+      ],
+    });
+    await ready();
+    fireEvent.change(screen.getByTestId("kaifan-join-plan-select"), {
+      target: { value: "promo" },
+    });
+    openAlong();
+    // 没有 promo 的型号带不上。
+    const boxes = within(alongBox()).getAllByRole("checkbox");
+    expect(boxes).toHaveLength(1);
+    fireEvent.click(boxes[0]);
+    expect(within(alongBox()).queryByRole("combobox")).toBeNull();
+    answer("ready", "configuration_ready");
+    fireEvent.click(go());
+    await waitFor(() => expect(activate).toHaveBeenCalled());
+    expect(activate.mock.calls[0][0].models).toEqual([
+      { modelId: "claude-sonnet-4-5-20250929", billingGroup: "promo" },
+      { modelId: "deepseek-v4", billingGroup: "promo" },
+    ]);
+  });
+
   it("存过的方案站点不提供了：不发出去也不自己换，先问；点了头才用新方案", async () => {
     setup({
       initialApp: "codex_desktop",

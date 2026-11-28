@@ -1832,6 +1832,35 @@ dialog.restore-dialog menu {
   align-items: center;
   gap: 8px;
 }
+.along {
+  margin: 10px 0 0;
+}
+.along ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0 4px 0 0;
+  display: grid;
+  gap: 6px;
+  max-height: 168px;
+  overflow-y: auto;
+}
+.along li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.along label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.along small {
+  display: block;
+  margin-top: 6px;
+  opacity: 0.7;
+}
 .lbl .sm[aria-pressed="true"] {
   color: var(--deep);
   background: #fff;
@@ -1890,7 +1919,8 @@ dialog.restore-dialog menu {
   color: var(--c);
 }
 .pf select.inp,
-.lbl select.inp {
+.lbl select.inp,
+.along select.inp {
   color-scheme: dark;
   width: auto;
   max-width: 260px;
@@ -1899,7 +1929,8 @@ dialog.restore-dialog menu {
   font-size: 12.5px;
 }
 .pf select.inp option,
-.lbl select.inp option {
+.lbl select.inp option,
+.along select.inp option {
   color: var(--ink);
   background: var(--deep);
 }
